@@ -10,6 +10,20 @@ import UserList from './UserList';
 import { Home, Copy, Check } from 'lucide-react';
 import styles from './RoomPage.module.css';
 
+// Global component instance manager to prevent multiple instances
+const componentInstances = new Map();
+const componentStates = new Map();
+
+// Global window-level protection against multiple instances
+if (!window.roomPageManager) {
+  window.roomPageManager = {
+    activeRooms: new Set(),
+    isRoomActive: (roomKey) => window.roomPageManager.activeRooms.has(roomKey),
+    registerRoom: (roomKey) => window.roomPageManager.activeRooms.add(roomKey),
+    unregisterRoom: (roomKey) => window.roomPageManager.activeRooms.delete(roomKey)
+  };
+}
+
 const RoomPage = () => {
   const { roomId } = useParams();
   const [searchParams] = useSearchParams();
@@ -80,18 +94,67 @@ const RoomPage = () => {
 
   // Socket connection and event handlers
   useEffect(() => {
+    // Create a component key based on roomId and username
+    const componentKey = `${roomId}-${username}`;
+    
+    // Check window-level protection first
+    if (window.roomPageManager.isRoomActive(componentKey)) {
+      console.log(`🚫 Window-level protection: Room ${componentKey} already has an active instance, blocking duplicate`);
+      return () => {
+        console.log(`🔄 Blocked component instance for ${componentKey} unmounting`);
+      };
+    }
+    
+    // Register at window level
+    window.roomPageManager.registerRoom(componentKey);
+    
+    // Check if this exact component instance already exists and is active
+    if (componentInstances.has(componentKey)) {
+      const existingInstance = componentInstances.get(componentKey);
+      console.log(`🚫 Component instance for ${componentKey} already exists (${existingInstance}), preventing duplicate`);
+      
+      // Share state from existing instance
+      const sharedState = componentStates.get(componentKey);
+      if (sharedState) {
+        setIsConnected(sharedState.isConnected || false);
+        setUsers(sharedState.users || []);
+        setMessages(sharedState.messages || []);
+        setIsHost(sharedState.isHost || false);
+        setCurrentVideoUrl(sharedState.currentVideoUrl || null);
+        setCurrentVideoTitle(sharedState.currentVideoTitle || null);
+      }
+      
+      return () => {
+        // Don't cleanup if there's already an active instance
+        console.log(`🔄 Shared component instance for ${componentKey} unmounting (keeping main instance active)`);
+      };
+    }
+    
+    // Register this as the active instance
+    const instanceId = Math.random().toString(36).substr(2, 9);
+    componentInstances.set(componentKey, instanceId);
+    console.log(`🆔 RoomPage instance ${instanceId} registered as primary for ${componentKey}`);
+    
     // Use singleton socket connection
     const socket = connectSocket();
-    
-    // Create a unique instance ID for this component instance
-    const instanceId = Math.random().toString(36).substr(2, 9);
-    console.log(`🆔 RoomPage instance ${instanceId} initializing`);
     
     let hasJoinedRoom = false;
     let connectionTimeout = null;
 
+    const updateSharedState = () => {
+      componentStates.set(componentKey, {
+        isConnected,
+        users,
+        messages,
+        isHost,
+        currentVideoUrl,
+        currentVideoTitle
+      });
+    };
+
     const handleConnect = () => {
       setIsConnected(true);
+      updateSharedState();
       
       // Prevent multiple joins from the same component instance
       if (hasJoinedRoom) {
@@ -103,9 +166,9 @@ const RoomPage = () => {
       if (!socketManager.canJoinRoom(roomId, username)) {
         console.log(`🚫 Instance ${instanceId} blocked by SocketManager - will retry in 3 seconds`);
         
-        // Retry after delay
+        // Retry after delay, but only if this is still the primary instance
         setTimeout(() => {
-          if (socket.connected && !hasJoinedRoom) {
+          if (socket.connected && !hasJoinedRoom && componentInstances.get(componentKey) === instanceId) {
             console.log(`🔄 Instance ${instanceId} retrying join after delay`);
             handleConnect();
           }
@@ -123,7 +186,7 @@ const RoomPage = () => {
       
       // Join with a small delay to ensure socket is ready
       connectionTimeout = setTimeout(() => {
-        if (socket.connected && !hasJoinedRoom) {
+        if (socket.connected && !hasJoinedRoom && componentInstances.get(componentKey) === instanceId) {
           console.log(`🚪 Instance ${instanceId} joining room: ${roomId} as ${username}`);
           socket.emit('join-room', { roomId, username });
           hasJoinedRoom = true;
@@ -131,7 +194,7 @@ const RoomPage = () => {
           
           // Request user list after join
           setTimeout(() => {
-            if (socket.connected) {
+            if (socket.connected && componentInstances.get(componentKey) === instanceId) {
               console.log(`🔄 Instance ${instanceId} requesting user list`);
               socket.emit('request-user-list');
             }
@@ -142,11 +205,14 @@ const RoomPage = () => {
 
     const handleDisconnect = () => {
       setIsConnected(false);
+      updateSharedState();
       hasJoinedRoom = false;
       hasJoinedRoomRef.current = false;
       
-      // Clear singleton manager state
-      socketManager.clearConnection(roomId, username);
+      // Only clear connection if this is the primary instance
+      if (componentInstances.get(componentKey) === instanceId) {
+        socketManager.clearConnection(roomId, username);
+      }
       
       if (connectionTimeout) {
         clearTimeout(connectionTimeout);
@@ -164,11 +230,13 @@ const RoomPage = () => {
       console.log(`✅ Instance ${instanceId} confirmed joined room successfully`);
       
       setIsHost(hostStatus);
+      updateSharedState();
       
       if (videoUrl && videoUrl !== currentVideoUrl) {
         console.log('📺 Setting video URL:', videoUrl);
         setCurrentVideoUrl(videoUrl);
         setCurrentVideoTitle(videoTitle);
+        updateSharedState();
       }
       
       // Wait for video to be ready before applying time/play state
@@ -291,6 +359,7 @@ const RoomPage = () => {
       console.log(`👥 User list updated - received ${userList?.length || 0} users:`, userList);
       if (Array.isArray(userList)) {
         setUsers(userList);
+        updateSharedState();
         console.log(`✅ User list state updated with ${userList.length} users`);
       } else {
         console.error('❌ Invalid user list received:', userList);
@@ -300,7 +369,16 @@ const RoomPage = () => {
     const handleNewChatMessage = (message) => {
       console.log('💬 New chat message:', message);
       if (message && message.message && message.author) {
-        setMessages(prev => [...prev, message]);
+        setMessages(prev => {
+          const newMessages = [...prev, message];
+          // Update shared state with new messages
+          const currentSharedState = componentStates.get(componentKey) || {};
+          componentStates.set(componentKey, {
+            ...currentSharedState,
+            messages: newMessages
+          });
+          return newMessages;
+        });
       } else {
         console.error('❌ Invalid chat message format:', message);
       }
@@ -352,36 +430,52 @@ const RoomPage = () => {
     return () => {
       console.log(`🧹 Instance ${instanceId} cleaning up`);
       
-      // Clear any pending connection timeout
-      if (connectionTimeout) {
-        clearTimeout(connectionTimeout);
-        connectionTimeout = null;
-      }
-      
-      // Clear singleton manager state on cleanup
-      socketManager.clearConnection(roomId, username);
-      
-      // Reset local state
-      hasJoinedRoom = false;
-      hasJoinedRoomRef.current = false;
+      // Only cleanup if this is the primary instance
+      if (componentInstances.get(componentKey) === instanceId) {
+        console.log(`🔥 Primary instance ${instanceId} for ${componentKey} cleaning up - clearing all state`);
+        
+        // Clear any pending connection timeout
+        if (connectionTimeout) {
+          clearTimeout(connectionTimeout);
+          connectionTimeout = null;
+        }
+        
+        // Clear singleton manager state on cleanup
+        socketManager.clearConnection(roomId, username);
+        
+        // Clear component instance tracking
+        componentInstances.delete(componentKey);
+        componentStates.delete(componentKey);
+        
+        // Clear window-level protection
+        window.roomPageManager.unregisterRoom(componentKey);
+        
+        // Reset local state
+        hasJoinedRoom = false;
+        hasJoinedRoomRef.current = false;
 
-      socket.off('connect', handleConnect);
-      socket.off('disconnect', handleDisconnect);
-      socket.off('connect_error', handleConnectError);
-      socket.off('reconnect', handleReconnect);
-      socket.off('sync-state', handleSyncState);
-      socket.off('host-assigned', handleHostAssigned);
-      socket.off('server:play', handleServerPlay);
-      socket.off('server:pause', handleServerPause);
-      socket.off('server:seek', handleServerSeek);
-      socket.off('server:change-video', handleServerChangeVideo);
-      socket.off('server:sync-time', handleServerSyncTime);
-      socket.off('server:request-host-time', handleRequestHostTime);
-      socket.off('user-joined', handleUserJoined);
-      socket.off('user-left', handleUserLeft);
-      socket.off('user-list-updated', handleUserListUpdated);
-      socket.off('new-chat-message', handleNewChatMessage);
-      socket.off('error', handleError);
+        socket.off('connect', handleConnect);
+        socket.off('disconnect', handleDisconnect);
+        socket.off('connect_error', handleConnectError);
+        socket.off('reconnect', handleReconnect);
+        socket.off('sync-state', handleSyncState);
+        socket.off('host-assigned', handleHostAssigned);
+        socket.off('server:play', handleServerPlay);
+        socket.off('server:pause', handleServerPause);
+        socket.off('server:seek', handleServerSeek);
+        socket.off('server:change-video', handleServerChangeVideo);
+        socket.off('server:sync-time', handleServerSyncTime);
+        socket.off('server:request-host-time', handleRequestHostTime);
+        socket.off('user-joined', handleUserJoined);
+        socket.off('user-left', handleUserLeft);
+        socket.off('user-list-updated', handleUserListUpdated);
+        socket.off('new-chat-message', handleNewChatMessage);
+        socket.off('error', handleError);
+      } else {
+        console.log(`🔄 Secondary instance ${instanceId} for ${componentKey} cleaning up - keeping primary instance active`);
+        // Still clear window protection for blocked instances
+        window.roomPageManager.unregisterRoom(componentKey);
+      }
       
       // Don't disconnect the socket here as other components might be using it
       // The singleton socket will handle its own lifecycle
