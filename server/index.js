@@ -63,13 +63,13 @@ if (process.env.NODE_ENV === 'production') {
       directives: {
         defaultSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
-        scriptSrc: ["'self'"],
+        scriptSrc: ["'self'", "https://www.youtube.com"],
         imgSrc: ["'self'", "data:", "https:"],
         connectSrc: ["'self'", "wss:", "ws:"],
         fontSrc: ["'self'"],
         objectSrc: ["'none'"],
         mediaSrc: ["'self'"],
-        frameSrc: ["'self'", "https://drive.google.com"]
+        frameSrc: ["'self'", "https://drive.google.com", "https://www.youtube.com"]
       }
     }
   }));
@@ -133,6 +133,24 @@ connectDB();
 // REST API Routes
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Server is running' });
+});
+
+// Placeholder API for video poster images
+app.get('/api/placeholder/:width/:height', (req, res) => {
+  const { width, height } = req.params;
+  // Generate a simple SVG placeholder
+  const svg = `
+    <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+      <rect width="100%" height="100%" fill="#1e1e1e"/>
+      <text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="#888" font-family="Arial, sans-serif" font-size="16">
+        Video Poster ${width}×${height}
+      </text>
+    </svg>
+  `;
+  
+  res.setHeader('Content-Type', 'image/svg+xml');
+  res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache for 24 hours
+  res.send(svg);
 });
 
 // Create a new room
