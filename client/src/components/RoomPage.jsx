@@ -142,6 +142,9 @@ const RoomPage = React.memo(() => {
     
     console.log(`🆔 RoomPage instance ${instanceId} successfully registered for ${componentKey} (attempt #${componentRegistry.getMountAttempts(componentKey)})`);
     
+    // CRITICAL: Register in legacy componentInstances map for join logic compatibility
+    componentInstances.set(componentKey, instanceId);
+    
     // Additional window-level protection
     const isFirstMount = window.roomPageManager.registerRoom(componentKey);
     if (!isFirstMount) {
