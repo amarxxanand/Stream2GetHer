@@ -1,5 +1,5 @@
 import React, { createContext, useContext } from 'react';
-import { socket } from '../socket';
+import { getSocket } from '../socket';
 
 const SocketContext = createContext();
 
@@ -12,6 +12,9 @@ export const useSocket = () => {
 };
 
 export const SocketProvider = ({ children }) => {
+  // Always use the singleton socket instance
+  const socket = getSocket();
+  
   return (
     <SocketContext.Provider value={socket}>
       {children}

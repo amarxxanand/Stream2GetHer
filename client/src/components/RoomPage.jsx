@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { useSocket } from '../contexts/SocketContext';
+import { connectSocket } from '../socket';
 import { socketManager } from '../services/socketManager';
 import VideoPlayer from './VideoPlayer';
 import VideoControls from './VideoControls';
@@ -79,37 +80,38 @@ const RoomPage = () => {
 
   // Socket connection and event handlers
   useEffect(() => {
-    if (!socket) return;
-
+    // Use singleton socket connection
+    const socket = connectSocket();
+    
     // Create a unique instance ID for this component instance
     const instanceId = Math.random().toString(36).substr(2, 9);
+    console.log(`🆔 RoomPage instance ${instanceId} initializing`);
+    
+    let hasJoinedRoom = false;
     let connectionTimeout = null;
-    let hasConnected = false;
 
     const handleConnect = () => {
       setIsConnected(true);
       
-      // If we already successfully joined, don't try again
-      if (hasJoinedRoomRef.current) {
+      // Prevent multiple joins from the same component instance
+      if (hasJoinedRoom) {
         console.log(`✅ Instance ${instanceId} already joined, skipping duplicate connect`);
         return;
       }
       
       // Use singleton socket manager to prevent duplicate connections
       if (!socketManager.canJoinRoom(roomId, username)) {
-        console.log(`🚫 Instance ${instanceId} blocked by SocketManager - will retry in 2.5 seconds`);
+        console.log(`🚫 Instance ${instanceId} blocked by SocketManager - will retry in 3 seconds`);
         
-        // Retry after a short delay if blocked (only if we haven't joined yet)
+        // Retry after delay
         setTimeout(() => {
-          if (socket.connected && !hasJoinedRoomRef.current) {
+          if (socket.connected && !hasJoinedRoom) {
             console.log(`🔄 Instance ${instanceId} retrying join after delay`);
             handleConnect();
           }
-        }, 2500);
+        }, 3000);
         return;
       }
-      
-      hasConnected = true;
       
       // Clear any existing connection timeout
       if (connectionTimeout) {
@@ -119,11 +121,13 @@ const RoomPage = () => {
       // Record this join attempt in the singleton manager
       socketManager.recordJoinAttempt(roomId, username);
       
-      // Delay join to ensure socket is fully ready
+      // Join with a small delay to ensure socket is ready
       connectionTimeout = setTimeout(() => {
-        if (socket.connected && !hasJoinedRoomRef.current) {
+        if (socket.connected && !hasJoinedRoom) {
           console.log(`🚪 Instance ${instanceId} joining room: ${roomId} as ${username}`);
           socket.emit('join-room', { roomId, username });
+          hasJoinedRoom = true;
+          hasJoinedRoomRef.current = true;
           
           // Request user list after join
           setTimeout(() => {
@@ -133,12 +137,12 @@ const RoomPage = () => {
             }
           }, 1000);
         }
-      }, 500); // Reduced delay
+      }, 1000);
     };
 
     const handleDisconnect = () => {
       setIsConnected(false);
-      hasConnected = false;
+      hasJoinedRoom = false;
       hasJoinedRoomRef.current = false;
       
       // Clear singleton manager state
@@ -155,6 +159,7 @@ const RoomPage = () => {
       console.log('🔄 Received sync state:', data);
       
       // Mark that we successfully joined the room - this confirms server accepted our join
+      hasJoinedRoom = true;
       hasJoinedRoomRef.current = true;
       console.log(`✅ Instance ${instanceId} confirmed joined room successfully`);
       
@@ -334,9 +339,19 @@ const RoomPage = () => {
     socket.on('new-chat-message', handleNewChatMessage);
     socket.on('error', handleError);
 
-    socket.connect();
+    // Connect if not already connected
+    if (!socket.connected) {
+      console.log(`🔄 Instance ${instanceId} initiating connection`);
+      socket.connect();
+    } else {
+      console.log(`✅ Instance ${instanceId} using existing connection`);
+      // Trigger connect handler if already connected
+      handleConnect();
+    }
 
     return () => {
+      console.log(`🧹 Instance ${instanceId} cleaning up`);
+      
       // Clear any pending connection timeout
       if (connectionTimeout) {
         clearTimeout(connectionTimeout);
@@ -347,9 +362,9 @@ const RoomPage = () => {
       socketManager.clearConnection(roomId, username);
       
       // Reset local state
-      hasConnected = false;
+      hasJoinedRoom = false;
       hasJoinedRoomRef.current = false;
-      
+
       socket.off('connect', handleConnect);
       socket.off('disconnect', handleDisconnect);
       socket.off('connect_error', handleConnectError);
@@ -367,7 +382,9 @@ const RoomPage = () => {
       socket.off('user-list-updated', handleUserListUpdated);
       socket.off('new-chat-message', handleNewChatMessage);
       socket.off('error', handleError);
-      socket.disconnect();
+      
+      // Don't disconnect the socket here as other components might be using it
+      // The singleton socket will handle its own lifecycle
     };
   }, [socket, roomId, username, isHost, currentVideoUrl, syncTolerance]);
 
