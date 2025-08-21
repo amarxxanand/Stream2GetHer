@@ -16,6 +16,30 @@ const componentInstances = new Map();
 const componentStates = new Map();
 const persistentComponents = new Map();
 
+// Global username manager to ensure stable usernames
+if (!window.userManager) {
+  window.userManager = {
+    usernames: new Map(),
+    getUsernameForRoom: (roomId, searchParamsUsername) => {
+      if (searchParamsUsername) {
+        return searchParamsUsername;
+      }
+      
+      const key = `room-${roomId}`;
+      if (!window.userManager.usernames.has(key)) {
+        const newUsername = `User-${Math.random().toString(36).substr(2, 6)}`;
+        window.userManager.usernames.set(key, newUsername);
+        console.log(`🎭 Generated stable username ${newUsername} for room ${roomId}`);
+      }
+      return window.userManager.usernames.get(key);
+    },
+    clearRoom: (roomId) => {
+      const key = `room-${roomId}`;
+      window.userManager.usernames.delete(key);
+    }
+  };
+}
+
 // Global window-level protection against multiple instances
 if (!window.roomPageManager) {
   window.roomPageManager = {
@@ -48,7 +72,9 @@ const RoomPage = React.memo(() => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const socket = useSocket();
-  const username = searchParams.get('username') || `User-${Math.random().toString(36).substr(2, 6)}`;
+  
+  // Use stable username generation
+  const username = window.userManager.getUsernameForRoom(roomId, searchParams.get('username'));
 
   // Create a stable component key for this exact room-username combination
   const componentKey = `${roomId}-${username}`;
@@ -473,6 +499,11 @@ const RoomPage = React.memo(() => {
         
         // Clear window-level protection
         window.roomPageManager.unregisterRoom(componentKey);
+        
+        // Clear stable username for this room (only if no searchParams username)
+        if (!searchParams.get('username')) {
+          window.userManager.clearRoom(roomId);
+        }
         
         // Reset local state
         hasJoinedRoom = false;
