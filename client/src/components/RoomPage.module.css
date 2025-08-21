@@ -1,67 +1,83 @@
 .roomPage {
   min-height: 100vh;
-  background: #121212; /* Dark theme background */
+  background: var(--bg-primary);
+  background-attachment: fixed;
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
 .roomHeader {
-  background: #1e1e1e; /* Darker header background */
-  color: #ffffff; /* Light text */
-  border-bottom: 1px solid #e2e8f0;
-  padding: 16px 24px;
+  background: var(--bg-card);
+  backdrop-filter: var(--blur-primary);
+  -webkit-backdrop-filter: var(--blur-primary);
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-primary);
+  padding: 20px 28px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-secondary);
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
 .headerLeft {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 20px;
 }
 
 .homeButton {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background: #2e2e2e; /* Dark button background */
-  color: #ffffff; /* Light text */
-  border: none;
-  border-radius: 8px;
-  font-weight: 500;
+  gap: 10px;
+  padding: 10px 18px;
+  background: var(--bg-glass);
+  color: var(--text-primary);
+  border: 1px solid var(--border-primary);
+  border-radius: 10px;
+  font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.3s ease;
+  backdrop-filter: var(--blur-secondary);
+  -webkit-backdrop-filter: var(--blur-secondary);
 }
 
 .homeButton:hover {
-  background: #3e3e3e; /* Slightly lighter on hover */
+  background: var(--bg-button);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-glow);
 }
 
 .roomInfo {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
 }
 
 .roomInfo h1 {
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: #ffffff; /* Light text */
+  font-size: 1.6rem;
+  font-weight: 700;
   margin: 0;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: var(--shadow-text);
 }
 
 .hostBadge {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: var(--gradient-success);
   color: white;
-  padding: 4px 12px;
+  padding: 6px 14px;
   border-radius: 20px;
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  box-shadow: var(--shadow-glow);
 }
 
 .headerRight {
@@ -73,47 +89,75 @@
 .copyButton {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background: #667eea;
+  gap: 10px;
+  padding: 10px 18px;
+  background: var(--gradient-secondary);
   color: white;
   border: none;
-  border-radius: 8px;
-  font-weight: 500;
+  border-radius: 10px;
+  font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow-primary);
+  position: relative;
+  overflow: hidden;
+}
+
+.copyButton::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: left 0.5s;
+}
+
+.copyButton:hover::before {
+  left: 100%;
 }
 
 .copyButton:hover {
-  background: #5a67d8;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glow);
 }
 
 .connectionStatus {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   font-size: 0.9rem;
-  color: #64748b;
+  color: var(--text-secondary);
+  background: var(--bg-glass);
+  padding: 8px 14px;
+  border-radius: 20px;
+  backdrop-filter: var(--blur-secondary);
+  -webkit-backdrop-filter: var(--blur-secondary);
+  border: 1px solid var(--border-primary);
 }
 
 .statusIndicator {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
+  box-shadow: 0 0 10px currentColor;
 }
 
 .statusIndicator.connected {
-  background: #10b981;
+  background: var(--success);
+  color: var(--success);
 }
 
 .statusIndicator.disconnected {
-  background: #ef4444;
+  background: var(--error);
+  color: var(--error);
 }
 
 .roomContent {
   flex: 1;
   display: grid;
-  grid-template-columns: 1fr 350px;
+  grid-template-columns: 1fr 400px;
   gap: 24px;
   padding: 24px;
   max-width: 1400px;
@@ -124,20 +168,36 @@
 .videoSection {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
+  background: var(--bg-card);
+  backdrop-filter: var(--blur-primary);
+  -webkit-backdrop-filter: var(--blur-primary);
+  border: 1px solid var(--border-primary);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: var(--shadow-primary);
+  transition: all 0.3s ease;
+}
+
+.videoSection:hover {
+  box-shadow: var(--shadow-secondary);
+  transform: translateY(-1px);
 }
 
 .videoContainer {
   position: relative;
-  background: #000;
+  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
   border-radius: 12px;
   overflow: hidden;
   aspect-ratio: 16/9;
+  border: 1px solid var(--border-primary);
+  box-shadow: var(--shadow-inset);
 }
 
 .youtubePlayer {
   width: 100%;
   height: 100%;
+  border-radius: 12px;
 }
 
 .noVideoPlaceholder {
@@ -145,11 +205,259 @@
   inset: 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
   justify-content: center;
+  align-items: center;
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 1.2rem;
+  gap: 16px;
+  backdrop-filter: var(--blur-primary);
+  -webkit-backdrop-filter: var(--blur-primary);
+}
+
+.noVideoPlaceholder::before {
+  content: '🎬';
+  font-size: 4rem;
+  opacity: 0.3;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.chatSection {
+  background: var(--bg-card);
+  backdrop-filter: var(--blur-primary);
+  -webkit-backdrop-filter: var(--blur-primary);
+  border: 1px solid var(--border-primary);
+  border-radius: 16px;
+  box-shadow: var(--shadow-primary);
+  display: flex;
+  flex-direction: column;
+  height: 600px;
+  transition: all 0.3s ease;
+}
+
+.chatSection:hover {
+  box-shadow: var(--shadow-secondary);
+  transform: translateY(-1px);
+}
+
+.userListSection {
+  background: var(--bg-card);
+  backdrop-filter: var(--blur-primary);
+  -webkit-backdrop-filter: var(--blur-primary);
+  border: 1px solid var(--border-primary);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: var(--shadow-primary);
+  transition: all 0.3s ease;
+}
+
+.userListSection:hover {
+  box-shadow: var(--shadow-secondary);
+  transform: translateY(-1px);
+}
+
+.userListSection h3 {
+  color: var(--text-primary);
+  margin: 0 0 16px 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  background: var(--gradient-secondary);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.userListSection h3::before {
+  content: '👥';
+  font-size: 1.1rem;
+  background: none;
+  -webkit-text-fill-color: initial;
+}
+
+.videoUrlForm {
+  background: var(--bg-card);
+  backdrop-filter: var(--blur-primary);
+  -webkit-backdrop-filter: var(--blur-primary);
+  border: 1px solid var(--border-primary);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: var(--shadow-primary);
+  margin-bottom: 20px;
+}
+
+.videoUrlForm h3 {
+  color: var(--text-primary);
+  margin: 0 0 16px 0;
+  font-size: 1.3rem;
+  font-weight: 600;
+  background: var(--gradient-secondary);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.videoUrlForm h3::before {
+  content: '🎥';
+  font-size: 1.2rem;
+  background: none;
+  -webkit-text-fill-color: initial;
+}
+
+.formGroup {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.videoInput {
+  flex: 1;
+  padding: 14px 18px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-primary);
+  border-radius: 12px;
+  color: var(--text-primary);
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  backdrop-filter: var(--blur-secondary);
+  -webkit-backdrop-filter: var(--blur-secondary);
+}
+
+.videoInput:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px var(--accent-primary-alpha);
+  background: var(--bg-glass);
+}
+
+.videoInput::placeholder {
+  color: var(--text-secondary);
+}
+
+.submitButton {
+  padding: 14px 24px;
+  background: var(--gradient-primary);
   color: white;
-  text-align: center;
-  background: rgba(0, 0, 0, 0.8);
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow-primary);
+  position: relative;
+  overflow: hidden;
+}
+
+.submitButton::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: left 0.5s;
+}
+
+.submitButton:hover::before {
+  left: 100%;
+}
+
+.submitButton:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glow);
+}
+
+.submitButton:active {
+  transform: translateY(0);
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .roomContent {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  
+  .sidebar {
+    order: -1;
+  }
+  
+  .chatSection {
+    height: 400px;
+  }
+}
+
+@media (max-width: 768px) {
+  .roomHeader {
+    padding: 16px 20px;
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  
+  .headerLeft {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .roomInfo {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .roomContent {
+    padding: 16px;
+    gap: 16px;
+  }
+  
+  .videoSection,
+  .videoUrlForm {
+    padding: 16px;
+  }
+  
+  .formGroup {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .submitButton {
+    width: 100%;
+  }
+  
+  .chatSection {
+    height: 300px;
+  }
+}
+
+/* Scrollbar Styling */
+.userListSection::-webkit-scrollbar {
+  width: 8px;
+}
+
+.userListSection::-webkit-scrollbar-track {
+  background: var(--bg-input);
+  border-radius: 4px;
+}
+
+.userListSection::-webkit-scrollbar-thumb {
+  background: var(--accent-primary);
+  border-radius: 4px;
+}
+
+.userListSection::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-secondary);
 }
 
 .noVideoPlaceholder p {
