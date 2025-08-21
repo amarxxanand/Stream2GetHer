@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { useSocket } from '../contexts/SocketContext';
-import { useYouTubePlayer } from '../hooks/useYouTubePlayer';
+import VideoPlayer from './VideoPlayer';
 import VideoControls from './VideoControls';
 import Chat from './Chat';
 import UserList from './UserList';
 import { Home, Copy, Check } from 'lucide-react';
+import styles from './RoomPage.module.css';
 
 const RoomPage = () => {
   const { roomId } = useParams();
@@ -15,19 +16,22 @@ const RoomPage = () => {
   const username = searchParams.get('username') || `User-${Math.random().toString(36).substr(2, 6)}`;
 
   const [isHost, setIsHost] = useState(false);
-  const [currentVideoId, setCurrentVideoId] = useState(null);
+  const [currentVideoUrl, setCurrentVideoUrl] = useState(null);
+  const [currentVideoTitle, setCurrentVideoTitle] = useState(null);
   const [users, setUsers] = useState([]);
   const [messages, setMessages] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
   const [roomInfo, setRoomInfo] = useState(null);
   const [syncTolerance] = useState(1.5); // seconds
   const [copied, setCopied] = useState(false);
+  const [isVideoReady, setIsVideoReady] = useState(false);
   
   const ignoreNextStateChange = useRef(false);
   const lastSyncTime = useRef(0);
+  const videoPlayerRef = useRef(null);
 
-  // YouTube player integration
-  const onPlayerStateChange = useCallback((event) => {
+  // Video player event handlers
+  const onVideoStateChange = useCallback((event) => {
     if (ignoreNextStateChange.current) {
       ignoreNextStateChange.current = false;
       return;
@@ -35,39 +39,39 @@ const RoomPage = () => {
 
     if (!isHost || !socket || !isConnected) return;
 
-    const currentTime = getCurrentTime();
-    const state = event.data;
-    const { PLAYER_STATES } = useYouTubePlayer();
+    const { type, currentTime } = event;
 
-    switch (state) {
-      case PLAYER_STATES.PLAYING:
+    switch (type) {
+      case 'play':
         socket.emit('host:play', { time: currentTime });
         break;
-      case PLAYER_STATES.PAUSED:
+      case 'pause':
         socket.emit('host:pause', { time: currentTime });
         break;
-      case PLAYER_STATES.BUFFERING:
-        // Handle buffering - client will request resync when ready
+      case 'seek':
+        socket.emit('host:seek', { time: currentTime });
         break;
       default:
         break;
     }
   }, [isHost, socket, isConnected]);
 
-  const onPlayerReady = useCallback(() => {
-    console.log('YouTube player is ready');
+  const onVideoReady = useCallback(() => {
+    console.log('Video player is ready');
+    setIsVideoReady(true);
   }, []);
 
-  const {
-    isReady,
-    play,
-    pause,
-    seekTo,
-    loadVideoById,
-    getCurrentTime,
-    getPlayerState,
-    PLAYER_STATES
-  } = useYouTubePlayer('youtube-player', onPlayerStateChange, onPlayerReady);
+  // Load video handler
+  const handleLoadVideo = useCallback((videoUrl, videoTitle) => {
+    if (!isHost) return;
+    
+    setCurrentVideoUrl(videoUrl);
+    setCurrentVideoTitle(videoTitle);
+    
+    if (socket) {
+      socket.emit('host:change-video', { videoUrl, videoTitle });
+    }
+  }, [isHost, socket]);
 
   // Socket connection and event handlers
   useEffect(() => {
@@ -83,28 +87,30 @@ const RoomPage = () => {
     };
 
     const handleSyncState = (data) => {
-      const { videoId, time, isPlaying, isHost: hostStatus } = data;
+      const { videoUrl, videoTitle, time, isPlaying, isHost: hostStatus } = data;
       setIsHost(hostStatus);
       
-      if (videoId && videoId !== currentVideoId) {
-        setCurrentVideoId(videoId);
-        loadVideoById(videoId, time);
-      } else if (time !== null) {
-        const currentTime = getCurrentTime();
+      if (videoUrl && videoUrl !== currentVideoUrl) {
+        setCurrentVideoUrl(videoUrl);
+        setCurrentVideoTitle(videoTitle);
+      }
+      
+      if (videoPlayerRef.current && time !== null) {
+        const currentTime = videoPlayerRef.current.getCurrentTime();
         const timeDiff = Math.abs(currentTime - time);
         
         if (timeDiff > syncTolerance) {
           ignoreNextStateChange.current = true;
-          seekTo(time);
+          videoPlayerRef.current.seekTo(time);
         }
       }
       
-      if (isPlaying !== null) {
+      if (videoPlayerRef.current && isPlaying !== null) {
         ignoreNextStateChange.current = true;
         if (isPlaying) {
-          play();
+          videoPlayerRef.current.play();
         } else {
-          pause();
+          videoPlayerRef.current.pause();
         }
       }
     };
@@ -115,58 +121,69 @@ const RoomPage = () => {
 
     const handleServerPlay = (data) => {
       const { time } = data;
-      const currentTime = getCurrentTime();
-      const timeDiff = Math.abs(currentTime - time);
       
-      if (timeDiff > syncTolerance) {
-        seekTo(time);
+      if (videoPlayerRef.current) {
+        const currentTime = videoPlayerRef.current.getCurrentTime();
+        const timeDiff = Math.abs(currentTime - time);
+        
+        if (timeDiff > syncTolerance) {
+          videoPlayerRef.current.seekTo(time);
+        }
+        
+        ignoreNextStateChange.current = true;
+        videoPlayerRef.current.play();
       }
-      
-      ignoreNextStateChange.current = true;
-      play();
     };
 
     const handleServerPause = (data) => {
       const { time } = data;
-      const currentTime = getCurrentTime();
-      const timeDiff = Math.abs(currentTime - time);
       
-      if (timeDiff > syncTolerance) {
-        seekTo(time);
+      if (videoPlayerRef.current) {
+        const currentTime = videoPlayerRef.current.getCurrentTime();
+        const timeDiff = Math.abs(currentTime - time);
+        
+        if (timeDiff > syncTolerance) {
+          videoPlayerRef.current.seekTo(time);
+        }
+        
+        ignoreNextStateChange.current = true;
+        videoPlayerRef.current.pause();
       }
-      
-      ignoreNextStateChange.current = true;
-      pause();
     };
 
     const handleServerSeek = (data) => {
       const { time } = data;
-      ignoreNextStateChange.current = true;
-      seekTo(time);
+      if (videoPlayerRef.current) {
+        ignoreNextStateChange.current = true;
+        videoPlayerRef.current.seekTo(time);
+      }
     };
 
     const handleServerChangeVideo = (data) => {
-      const { videoId } = data;
-      setCurrentVideoId(videoId);
-      loadVideoById(videoId, 0);
+      const { videoUrl, videoTitle } = data;
+      setCurrentVideoUrl(videoUrl);
+      setCurrentVideoTitle(videoTitle);
     };
 
     const handleServerSyncTime = (data) => {
       const { time: authoritativeTime } = data;
-      const currentTime = getCurrentTime();
-      const timeDiff = Math.abs(currentTime - authoritativeTime);
       
-      if (timeDiff > syncTolerance) {
-        ignoreNextStateChange.current = true;
-        seekTo(authoritativeTime);
+      if (videoPlayerRef.current) {
+        const currentTime = videoPlayerRef.current.getCurrentTime();
+        const timeDiff = Math.abs(currentTime - authoritativeTime);
+        
+        if (timeDiff > syncTolerance) {
+          ignoreNextStateChange.current = true;
+          videoPlayerRef.current.seekTo(authoritativeTime);
+        }
       }
       
       lastSyncTime.current = Date.now();
     };
 
     const handleRequestHostTime = () => {
-      if (isHost) {
-        const currentTime = getCurrentTime();
+      if (isHost && videoPlayerRef.current) {
+        const currentTime = videoPlayerRef.current.getCurrentTime();
         socket.emit('host:report-time', { time: currentTime });
       }
     };
@@ -229,35 +246,24 @@ const RoomPage = () => {
       socket.off('error', handleError);
       socket.disconnect();
     };
-  }, [socket, roomId, username, isHost, getCurrentTime, play, pause, seekTo, loadVideoById, currentVideoId, syncTolerance]);
+  }, [socket, roomId, username, isHost, currentVideoUrl, syncTolerance]);
 
-  // Handle buffering recovery
+  // Handle buffering recovery for video player
   useEffect(() => {
     if (!socket || !isConnected) return;
 
     const checkBuffering = () => {
-      const state = getPlayerState();
-      if (state === PLAYER_STATES.PLAYING && lastSyncTime.current > 0) {
-        // Check if we need to resync after buffering
-        const timeSinceLastSync = Date.now() - lastSyncTime.current;
-        if (timeSinceLastSync > 5000) { // 5 seconds since last sync
-          socket.emit('client:request-sync');
-        }
+      // Request resync if we haven't received updates for a while
+      const timeSinceLastSync = Date.now() - lastSyncTime.current;
+      if (timeSinceLastSync > 10000) { // 10 seconds since last sync
+        socket.emit('client:request-sync');
+        lastSyncTime.current = Date.now();
       }
     };
 
     const interval = setInterval(checkBuffering, 2000);
     return () => clearInterval(interval);
-  }, [socket, isConnected, getPlayerState, PLAYER_STATES.PLAYING]);
-
-  // Load video function for host
-  const handleLoadVideo = (videoId) => {
-    if (!isHost || !socket) return;
-    
-    setCurrentVideoId(videoId);
-    loadVideoById(videoId, 0);
-    socket.emit('host:change-video', { videoId });
-  };
+  }, [socket, isConnected]);
 
   // Copy room link
   const copyRoomLink = () => {
@@ -280,51 +286,59 @@ const RoomPage = () => {
   }
 
   return (
-    <div className="room-page">
-      <header className="room-header">
-        <div className="header-left">
-          <button onClick={() => navigate('/')} className="home-button">
+    <div className={styles.roomPage}>
+      <header className={styles.roomHeader}>
+        <div className={styles.headerLeft}>
+          <button onClick={() => navigate('/')} className={styles.homeButton}>
             <Home size={20} />
             Home
           </button>
-          <div className="room-info">
+          <div className={styles.roomInfo}>
             <h1>Room: {roomId}</h1>
-            {isHost && <span className="host-badge">HOST</span>}
+            {isHost && <span className={styles.hostBadge}>HOST</span>}
           </div>
         </div>
-        <div className="header-right">
-          <button onClick={copyRoomLink} className="copy-button">
+        <div className={styles.headerRight}>
+          <button onClick={copyRoomLink} className={styles.copyButton}>
             {copied ? <Check size={16} /> : <Copy size={16} />}
             {copied ? 'Copied!' : 'Copy Link'}
           </button>
-          <div className="connection-status">
-            <div className={`status-indicator ${isConnected ? 'connected' : 'disconnected'}`} />
+          <div className={styles.connectionStatus}>
+            <div className={`${styles.statusIndicator} ${isConnected ? styles.connected : styles.disconnected}`} />
             {isConnected ? 'Connected' : 'Disconnected'}
           </div>
         </div>
       </header>
 
-      <div className="room-content">
-        <div className="video-section">
-          <div className="video-container">
-            <div id="youtube-player" className="youtube-player" />
-            {!currentVideoId && (
-              <div className="no-video-placeholder">
+      <div className={styles.roomContent}>
+        <div className={styles.videoSection}>
+          <div className={styles.videoContainer}>
+            <VideoPlayer
+              ref={videoPlayerRef}
+              videoUrl={currentVideoUrl}
+              isHost={isHost}
+              onStateChange={onVideoStateChange}
+              onReady={onVideoReady}
+              className="main-video-player"
+            />
+            {!currentVideoUrl && (
+              <div className={styles.noVideoPlaceholder}>
                 <p>No video loaded</p>
-                {isHost && <p>Load a YouTube video to get started!</p>}
+                {isHost && <p>Load a Google Drive video to get started!</p>}
               </div>
             )}
           </div>
           {isHost && (
             <VideoControls
               onLoadVideo={handleLoadVideo}
-              currentVideoId={currentVideoId}
-              isPlayerReady={isReady}
+              currentVideoUrl={currentVideoUrl}
+              currentVideoTitle={currentVideoTitle}
+              isPlayerReady={isVideoReady}
             />
           )}
         </div>
 
-        <div className="sidebar">
+        <div className={styles.sidebar}>
           <UserList users={users} currentUsername={username} />
           <Chat
             messages={messages}
@@ -333,201 +347,6 @@ const RoomPage = () => {
           />
         </div>
       </div>
-
-      <style jsx>{`
-        .room-page {
-          min-height: 100vh;
-          background: #f8fafc;
-          display: flex;
-          flex-direction: column;
-        }
-
-        .room-header {
-          background: white;
-          border-bottom: 1px solid #e2e8f0;
-          padding: 16px 24px;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        }
-
-        .header-left {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-        }
-
-        .home-button {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding: 8px 16px;
-          background: #f1f5f9;
-          border: none;
-          border-radius: 8px;
-          color: #475569;
-          font-weight: 500;
-          cursor: pointer;
-          transition: background-color 0.2s;
-        }
-
-        .home-button:hover {
-          background: #e2e8f0;
-        }
-
-        .room-info {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-        }
-
-        .room-info h1 {
-          font-size: 1.5rem;
-          font-weight: 600;
-          color: #1e293b;
-          margin: 0;
-        }
-
-        .host-badge {
-          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-          color: white;
-          padding: 4px 12px;
-          border-radius: 20px;
-          font-size: 0.75rem;
-          font-weight: 600;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-        }
-
-        .header-right {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-        }
-
-        .copy-button {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding: 8px 16px;
-          background: #667eea;
-          color: white;
-          border: none;
-          border-radius: 8px;
-          font-weight: 500;
-          cursor: pointer;
-          transition: background-color 0.2s;
-        }
-
-        .copy-button:hover {
-          background: #5a67d8;
-        }
-
-        .connection-status {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          font-size: 0.9rem;
-          color: #64748b;
-        }
-
-        .status-indicator {
-          width: 8px;
-          height: 8px;
-          border-radius: 50%;
-        }
-
-        .status-indicator.connected {
-          background: #10b981;
-        }
-
-        .status-indicator.disconnected {
-          background: #ef4444;
-        }
-
-        .room-content {
-          flex: 1;
-          display: grid;
-          grid-template-columns: 1fr 350px;
-          gap: 24px;
-          padding: 24px;
-          max-width: 1400px;
-          margin: 0 auto;
-          width: 100%;
-        }
-
-        .video-section {
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-        }
-
-        .video-container {
-          position: relative;
-          background: #000;
-          border-radius: 12px;
-          overflow: hidden;
-          aspect-ratio: 16/9;
-        }
-
-        .youtube-player {
-          width: 100%;
-          height: 100%;
-        }
-
-        .no-video-placeholder {
-          position: absolute;
-          inset: 0;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          text-align: center;
-          background: rgba(0, 0, 0, 0.8);
-        }
-
-        .no-video-placeholder p {
-          margin: 4px 0;
-          font-size: 1.1rem;
-        }
-
-        .sidebar {
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-          height: fit-content;
-        }
-
-        @media (max-width: 1024px) {
-          .room-content {
-            grid-template-columns: 1fr;
-            gap: 16px;
-          }
-
-          .sidebar {
-            order: -1;
-          }
-        }
-
-        @media (max-width: 768px) {
-          .room-header {
-            flex-direction: column;
-            gap: 12px;
-            align-items: flex-start;
-          }
-
-          .header-right {
-            width: 100%;
-            justify-content: space-between;
-          }
-
-          .room-content {
-            padding: 16px;
-          }
-        }
-      `}</style>
     </div>
   );
 };

@@ -1,13 +1,31 @@
 services:
+  # Single Full-Stack Service
   - type: web
-    name: stream2gether-backend
+    name: stream2gether
     env: node
-    region: oregon
-    plan: free
-    buildCommand: cd server && npm install
+    plan: starter
+    buildCommand: |
+      cd client && 
+      echo "VITE_API_BASE_URL=https://stream2gether.onrender.com/api" > .env &&
+      echo "VITE_SERVER_URL=https://stream2gether.onrender.com" >> .env &&
+      npm ci && npm run build &&
+      cd ../server && npm ci --only=production
     startCommand: cd server && npm start
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 10000
+      - key: MONGODB_URI
+        fromDatabase:
+          name: stream2gether-db
+          property: connectionString
+      - key: CLIENT_URL
+        value: https://stream2gether.onrender.com
+      - key: GOOGLE_SERVICE_ACCOUNT_KEY
+        sync: false # Set this manually in Render dashboard
+
+databases:
+  - name: stream2gether-db
+    databaseName: stream2gether
+    plan: starter

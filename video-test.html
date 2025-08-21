@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Test - Stream2GetHer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: white;
+        }
+        .test-container {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #444;
+            border-radius: 8px;
+            background: #2a2a2a;
+        }
+        .video-container {
+            margin: 20px 0;
+        }
+        video {
+            width: 100%;
+            max-width: 800px;
+            height: auto;
+            border: 1px solid #666;
+        }
+        .test-url {
+            background: #333;
+            padding: 10px;
+            border-radius: 4px;
+            word-break: break-all;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .status.loading { background: #f39c12; color: black; }
+        .status.success { background: #27ae60; }
+        .status.error { background: #e74c3c; }
+        .logs {
+            background: #000;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin: 10px 0;
+        }
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #2980b9; }
+        button:disabled { background: #7f8c8d; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+    <h1>🎬 Stream2GetHer Video Test Page</h1>
+    <p>This page tests video streaming and transcoding functionality.</p>
+
+    <!-- MP4 Test -->
+    <div class="test-container">
+        <h2>Test 1: MP4 Video (Should work directly)</h2>
+        <div class="test-url" id="mp4-url">Loading...</div>
+        <div class="status loading" id="mp4-status">Not tested</div>
+        <button onclick="testMP4()">Test MP4 Video</button>
+        <button onclick="getMP4Info()">Get Video Info</button>
+        <div class="video-container">
+            <video id="mp4-video" controls preload="metadata">
+                Your browser does not support the video tag.
+            </video>
+        </div>
+        <div class="logs" id="mp4-logs"></div>
+    </div>
+
+    <!-- MKV Test -->
+    <div class="test-container">
+        <h2>Test 2: MKV Video (Should be transcoded)</h2>
+        <div class="test-url" id="mkv-url">Loading...</div>
+        <div class="status loading" id="mkv-status">Not tested</div>
+        <button onclick="testMKV()">Test MKV Video (Direct)</button>
+        <button onclick="testMKVTranscode()">Test MKV Video (Transcoded)</button>
+        <button onclick="getMKVInfo()">Get Video Info</button>
+        <div class="video-container">
+            <video id="mkv-video" controls preload="metadata">
+                Your browser does not support the video tag.
+            </video>
+        </div>
+        <div class="logs" id="mkv-logs"></div>
+    </div>
+
+    <script>
+        const SERVER_URL = 'http://localhost:3000';
+        
+        // Test URLs
+        const MP4_URL = 'https://drive.google.com/file/d/1O0O9ygNj_IRGWSKgX79BaUK53Mj1ux18/view?usp=sharing';
+        const MKV_URL = 'https://drive.google.com/file/d/1yC80q886ohkEuNqPqhtWLjMZvnmnOtRt/view?usp=sharing';
+
+        // Update URLs on page
+        document.getElementById('mp4-url').textContent = MP4_URL;
+        document.getElementById('mkv-url').textContent = MKV_URL;
+
+        function log(elementId, message) {
+            const logElement = document.getElementById(elementId);
+            const timestamp = new Date().toLocaleTimeString();
+            logElement.innerHTML += `[${timestamp}] ${message}\n`;
+            logElement.scrollTop = logElement.scrollHeight;
+            console.log(`[${elementId}] ${message}`);
+        }
+
+        function setStatus(elementId, message, type) {
+            const statusElement = document.getElementById(elementId);
+            statusElement.textContent = message;
+            statusElement.className = `status ${type}`;
+        }
+
+        function addVideoEventListeners(videoId, logId) {
+            const video = document.getElementById(videoId);
+            
+            video.addEventListener('loadstart', () => log(logId, '📡 Video loading started'));
+            video.addEventListener('loadedmetadata', () => log(logId, '📋 Video metadata loaded'));
+            video.addEventListener('canplay', () => log(logId, '✅ Video can start playing'));
+            video.addEventListener('canplaythrough', () => log(logId, '✅ Video can play through'));
+            video.addEventListener('waiting', () => log(logId, '⏳ Video buffering...'));
+            video.addEventListener('playing', () => log(logId, '▶️ Video started playing'));
+            video.addEventListener('error', (e) => {
+                const error = e.target.error;
+                log(logId, `❌ Video error: ${error ? error.message : 'Unknown error'}`);
+                log(logId, `❌ Error code: ${error ? error.code : 'Unknown'}`);
+                log(logId, `❌ Ready state: ${e.target.readyState}`);
+                log(logId, `❌ Network state: ${e.target.networkState}`);
+                log(logId, `❌ Source: ${e.target.src}`);
+            });
+            
+            video.addEventListener('progress', () => {
+                if (video.buffered.length > 0) {
+                    const buffered = video.buffered.end(0);
+                    const duration = video.duration || 0;
+                    const percent = duration > 0 ? (buffered / duration * 100).toFixed(1) : 0;
+                    log(logId, `📊 Buffered: ${buffered.toFixed(1)}s (${percent}%)`);
+                }
+            });
+        }
+
+        async function getVideoInfo(url, logId) {
+            try {
+                log(logId, `🔍 Getting video info for: ${url}`);
+                const response = await fetch(`${SERVER_URL}/api/video/info?url=${encodeURIComponent(url)}`);
+                const info = await response.json();
+                
+                log(logId, `📋 Video Info:`);
+                log(logId, `   Name: ${info.name}`);
+                log(logId, `   MIME Type: ${info.mimeType}`);
+                log(logId, `   Size: ${info.sizeFormatted}`);
+                log(logId, `   Needs Transcoding: ${info.needsTranscoding}`);
+                log(logId, `   FFmpeg Available: ${info.ffmpegAvailable}`);
+                log(logId, `   Browser Compatible: ${info.browserCompatible}`);
+                log(logId, `   Stream URL: ${info.streamUrl}`);
+                log(logId, `   Transcoded URL: ${info.transcodedUrl || 'N/A'}`);
+                
+                return info;
+            } catch (error) {
+                log(logId, `❌ Failed to get video info: ${error.message}`);
+                return null;
+            }
+        }
+
+        async function testVideo(videoId, url, logId, statusId, useTranscode = false) {
+            const video = document.getElementById(videoId);
+            
+            // Clear previous logs
+            document.getElementById(logId).innerHTML = '';
+            
+            // Add event listeners
+            addVideoEventListeners(videoId, logId);
+            
+            setStatus(statusId, 'Testing...', 'loading');
+            log(logId, `🎬 Testing video: ${url}`);
+            
+            try {
+                // Get video info first
+                const info = await getVideoInfo(url, logId);
+                if (!info) {
+                    setStatus(statusId, 'Failed to get video info', 'error');
+                    return;
+                }
+                
+                // Determine stream URL
+                let streamUrl;
+                if (useTranscode && info.transcodedUrl) {
+                    streamUrl = `${SERVER_URL}${info.transcodedUrl}`;
+                    log(logId, `🔄 Using transcoded stream`);
+                } else {
+                    streamUrl = `${SERVER_URL}${info.streamUrl}`;
+                    log(logId, `📡 Using direct stream`);
+                }
+                
+                log(logId, `🔗 Stream URL: ${streamUrl}`);
+                
+                // Set video source
+                video.src = streamUrl;
+                video.load();
+                
+                // Wait for video to be ready
+                const waitForVideo = new Promise((resolve, reject) => {
+                    const timeout = setTimeout(() => {
+                        reject(new Error('Video load timeout'));
+                    }, 30000);
+                    
+                    video.addEventListener('canplay', () => {
+                        clearTimeout(timeout);
+                        resolve();
+                    }, { once: true });
+                    
+                    video.addEventListener('error', (e) => {
+                        clearTimeout(timeout);
+                        reject(e.target.error || new Error('Video error'));
+                    }, { once: true });
+                });
+                
+                await waitForVideo;
+                setStatus(statusId, 'Video loaded successfully!', 'success');
+                log(logId, '🎉 Video test completed successfully');
+                
+            } catch (error) {
+                setStatus(statusId, `Failed: ${error.message}`, 'error');
+                log(logId, `❌ Video test failed: ${error.message}`);
+            }
+        }
+
+        // Test functions
+        function testMP4() {
+            testVideo('mp4-video', MP4_URL, 'mp4-logs', 'mp4-status');
+        }
+
+        function testMKV() {
+            testVideo('mkv-video', MKV_URL, 'mkv-logs', 'mkv-status');
+        }
+
+        function testMKVTranscode() {
+            testVideo('mkv-video', MKV_URL, 'mkv-logs', 'mkv-status', true);
+        }
+
+        function getMP4Info() {
+            document.getElementById('mp4-logs').innerHTML = '';
+            getVideoInfo(MP4_URL, 'mp4-logs');
+        }
+
+        function getMKVInfo() {
+            document.getElementById('mkv-logs').innerHTML = '';
+            getVideoInfo(MKV_URL, 'mkv-logs');
+        }
+
+        // Auto-run tests on page load
+        window.addEventListener('load', () => {
+            log('mp4-logs', '🚀 Page loaded, ready for testing');
+            log('mkv-logs', '🚀 Page loaded, ready for testing');
+        });
+    </script>
+</body>
+</html>

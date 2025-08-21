@@ -53,7 +53,8 @@ export const handleSocketConnection = (socket, io) => {
       
       // Send current state to the new user
       socket.emit('sync-state', {
-        videoId: room.currentVideoId,
+        videoUrl: room.currentVideoUrl,
+        videoTitle: room.currentVideoTitle,
         time: room.lastKnownTime,
         isPlaying: room.lastKnownState,
         isHost: activeRoom.hostSocketId === socket.id
@@ -138,17 +139,18 @@ export const handleSocketConnection = (socket, io) => {
     if (!isHost(socket)) return;
     
     try {
-      const { videoId } = data;
+      const { videoUrl, videoTitle } = data;
       const room = await Room.findOne({ roomId: socket.roomId });
       if (room) {
-        room.currentVideoId = videoId;
+        room.currentVideoUrl = videoUrl;
+        room.currentVideoTitle = videoTitle || null;
         room.lastKnownTime = 0;
         room.lastKnownState = false;
         await room.save();
       }
       
-      io.to(socket.roomId).emit('server:change-video', { videoId });
-      console.log(`Host ${socket.username} changed video to ${videoId}`);
+      io.to(socket.roomId).emit('server:change-video', { videoUrl, videoTitle });
+      console.log(`Host ${socket.username} changed video to ${videoUrl}`);
     } catch (error) {
       console.error('Error handling host:change-video:', error);
     }
@@ -168,7 +170,8 @@ export const handleSocketConnection = (socket, io) => {
       const room = await Room.findOne({ roomId: socket.roomId });
       if (room) {
         socket.emit('sync-state', {
-          videoId: room.currentVideoId,
+          videoUrl: room.currentVideoUrl,
+          videoTitle: room.currentVideoTitle,
           time: room.lastKnownTime,
           isPlaying: room.lastKnownState,
           isHost: false

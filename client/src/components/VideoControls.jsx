@@ -1,14 +1,18 @@
 import React, { useState } from 'react';
-import { Play, Pause, SkipBack, SkipForward, Search } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, Search, Upload } from 'lucide-react';
+import styles from './VideoControls.module.css';
 
-const VideoControls = ({ onLoadVideo, currentVideoId, isPlayerReady }) => {
+const VideoControls = ({ onLoadVideo, currentVideoUrl, currentVideoTitle, isPlayerReady }) => {
   const [videoUrl, setVideoUrl] = useState('');
+  const [videoTitle, setVideoTitle] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
 
-  const extractVideoId = (url) => {
+  const extractFileId = (url) => {
     const patterns = [
-      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
-      /^([a-zA-Z0-9_-]{11})$/ // Direct video ID
+      /\/file\/d\/([a-zA-Z0-9-_]+)/, // Standard share URL
+      /id=([a-zA-Z0-9-_]+)/, // URL with id parameter
+      /^([a-zA-Z0-9-_]+)$/ // Direct file ID
     ];
 
     for (const pattern of patterns) {
@@ -18,23 +22,85 @@ const VideoControls = ({ onLoadVideo, currentVideoId, isPlayerReady }) => {
     return null;
   };
 
+  const validateGoogleDriveUrl = async (url) => {
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SERVER_URL || 'http://localhost:3000'}/api/video/metadata?url=${encodeURIComponent(url)}`
+      );
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Invalid video URL');
+      }
+      
+      const metadata = await response.json();
+      return metadata;
+    } catch (error) {
+      throw error;
+    }
+  };
+
   const handleLoadVideo = async () => {
-    const videoId = extractVideoId(videoUrl.trim());
+    const trimmedUrl = videoUrl.trim();
     
-    if (!videoId) {
-      alert('Please enter a valid YouTube URL or video ID');
+    if (!trimmedUrl) {
+      alert('Please enter a Google Drive video URL');
+      return;
+    }
+
+    const fileId = extractFileId(trimmedUrl);
+    if (!fileId) {
+      alert('Please enter a valid Google Drive URL or file ID');
       return;
     }
 
     setIsLoading(true);
+    setIsValidating(true);
+    
     try {
-      onLoadVideo(videoId);
+      // Validate the video file
+      const metadata = await validateGoogleDriveUrl(trimmedUrl);
+      
+      // Show warning for potentially problematic formats
+      if (metadata.mimeType && (metadata.mimeType.includes('matroska') || metadata.mimeType.includes('mkv'))) {
+        const proceed = confirm(`🎬 MKV Format Detected\n\nThis video is in MKV format, which has limited browser support:\n\n• ⚠️ Seeking (skipping to different parts) will often cause errors\n• 🔄 Video may restart from beginning when seeking\n• ⏸️ Pausing and playing works normally\n• 📱 Mobile devices may have more issues\n\nRecommendation: Convert to MP4 for best experience.\n\nContinue loading this MKV video?`);
+        if (!proceed) {
+          return;
+        }
+      }
+      
+      // Show warning if Google Drive API is not configured
+      if (metadata.warning) {
+        const proceed = confirm(`${metadata.warning}\n\nVideo may not play correctly. Continue anyway?`);
+        if (!proceed) {
+          return;
+        }
+      }
+      
+      // Use provided title or fallback to file name
+      const finalTitle = videoTitle.trim() || metadata.name || `Video ${fileId.substring(0, 8)}`;
+      
+      onLoadVideo(trimmedUrl, finalTitle);
       setVideoUrl('');
+      setVideoTitle('');
     } catch (error) {
       console.error('Error loading video:', error);
-      alert('Failed to load video');
+      
+      // Provide specific error messages for different scenarios
+      if (error.message.includes('Google Drive API not configured') || error.message.includes('service not configured')) {
+        alert(`❌ Google Drive API Setup Required\n\nTo play Google Drive videos, you need to:\n\n1. Set up Google Drive API credentials\n2. Add them to your .env file\n3. Restart the server\n\nAlternatively, you can use direct video URLs (like .mp4 files from other hosting services) for testing.\n\nSee the console or MIGRATION-GUIDE.md for detailed setup instructions.`);
+      } else if (error.message.includes('Invalid Google Drive URL')) {
+        alert(`❌ Invalid URL\n\nPlease make sure you're using a valid Google Drive share link or file ID.\n\nExpected formats:\n• https://drive.google.com/file/d/FILE_ID/view\n• https://drive.google.com/open?id=FILE_ID\n• Just the FILE_ID`);
+      } else if (error.message.includes('not accessible')) {
+        alert(`❌ Access Denied\n\nThe video file cannot be accessed. Please ensure:\n\n1. The file sharing is set to "Anyone with the link"\n2. The file exists and hasn't been deleted\n3. You have the correct permissions`);
+      } else if (error.message.includes('not a video')) {
+        alert(`❌ Invalid File Type\n\nThe file is not a supported video format.\n\nSupported formats: MP4, WebM, AVI, MOV, OGG`);
+      } else {
+        alert(`Failed to load video: ${error.message}`);
+      }
     } finally {
       setIsLoading(false);
+      setIsValidating(false);
     }
   };
 
@@ -44,217 +110,97 @@ const VideoControls = ({ onLoadVideo, currentVideoId, isPlayerReady }) => {
     }
   };
 
+  const generateShareableLink = (url) => {
+    const fileId = extractFileId(url);
+    if (fileId) {
+      return `https://drive.google.com/file/d/${fileId}/view?usp=sharing`;
+    }
+    return url;
+  };
+
   return (
-    <div className="video-controls">
-      <div className="controls-header">
+    <div className={styles.videoControls}>
+      <div className={styles.controlsHeader}>
         <h3>Video Controls</h3>
-        <span className="host-only">Host Only</span>
+        <span className={styles.hostOnly}>Host Only</span>
       </div>
       
-      <div className="load-video-section">
-        <label htmlFor="video-url">Load YouTube Video</label>
-        <div className="input-group">
+      <div className={styles.loadVideoSection}>
+        <label htmlFor="video-url">Load Google Drive Video</label>
+        <div className={styles.inputGroup}>
           <input
             id="video-url"
             type="text"
-            placeholder="Paste YouTube URL or Video ID"
+            placeholder="Paste Google Drive video URL or file ID"
             value={videoUrl}
             onChange={(e) => setVideoUrl(e.target.value)}
+            onKeyPress={handleKeyPress}
+          />
+          <input
+            id="video-title"
+            type="text"
+            placeholder="Video title (optional)"
+            value={videoTitle}
+            onChange={(e) => setVideoTitle(e.target.value)}
             onKeyPress={handleKeyPress}
           />
           <button
             onClick={handleLoadVideo}
             disabled={!videoUrl.trim() || isLoading}
-            className="load-button"
+            className={styles.loadButton}
           >
-            {isLoading ? (
-              <div className="spinner" />
+            {isValidating ? (
+              <div className={styles.spinner} />
             ) : (
-              <Search size={16} />
+              <Upload size={16} />
             )}
             {isLoading ? 'Loading...' : 'Load'}
           </button>
         </div>
       </div>
 
-      {currentVideoId && (
-        <div className="current-video">
-          <p>Current Video: <strong>{currentVideoId}</strong></p>
-          <p className="video-status">
+      {currentVideoUrl && (
+        <div className={styles.currentVideo}>
+          <p>Current Video: <strong>{currentVideoTitle || 'Untitled Video'}</strong></p>
+          <p className={styles.videoStatus}>
             Player: {isPlayerReady ? 'Ready' : 'Loading...'}
+          </p>
+          <p className={styles.videoUrl}>
+            <small>URL: {generateShareableLink(currentVideoUrl)}</small>
           </p>
         </div>
       )}
 
-      <div className="instructions">
-        <h4>Instructions:</h4>
+      <div className={styles.instructions}>
+        <h4>📋 Instructions:</h4>
         <ul>
-          <li>Use the YouTube player controls above to play, pause, and seek</li>
+          <li><strong>Google Drive Setup Required:</strong> Configure Google Drive API credentials in server/.env</li>
+          <li>Share a Google Drive video file with "Anyone with the link" access</li>
+          <li>Paste the share link or file ID in the input above</li>
+          <li>Use the video player controls to play, pause, and seek</li>
           <li>All participants will automatically sync with your actions</li>
-          <li>You can load any public YouTube video</li>
-          <li>The system will automatically handle buffering and resync</li>
+          <li>Supported formats: MP4, WebM, AVI, MOV, and other common video formats</li>
         </ul>
+        <p><em>💡 For testing without Google Drive API: Use direct video URLs (.mp4 links) from other hosting services</em></p>
       </div>
 
-      <style jsx>{`
-        .video-controls {
-          background: white;
-          border-radius: 12px;
-          padding: 20px;
-          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .controls-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 20px;
-        }
-
-        .controls-header h3 {
-          margin: 0;
-          color: #1e293b;
-          font-size: 1.2rem;
-          font-weight: 600;
-        }
-
-        .host-only {
-          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-          color: white;
-          padding: 4px 12px;
-          border-radius: 20px;
-          font-size: 0.75rem;
-          font-weight: 600;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-        }
-
-        .load-video-section {
-          margin-bottom: 20px;
-        }
-
-        .load-video-section label {
-          display: block;
-          font-weight: 500;
-          color: #374151;
-          margin-bottom: 8px;
-        }
-
-        .input-group {
-          display: flex;
-          gap: 8px;
-        }
-
-        .input-group input {
-          flex: 1;
-          padding: 12px 16px;
-          border: 2px solid #e5e7eb;
-          border-radius: 8px;
-          font-size: 0.9rem;
-          transition: border-color 0.2s;
-        }
-
-        .input-group input:focus {
-          outline: none;
-          border-color: #667eea;
-        }
-
-        .load-button {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding: 12px 20px;
-          background: #667eea;
-          color: white;
-          border: none;
-          border-radius: 8px;
-          font-weight: 500;
-          cursor: pointer;
-          transition: background-color 0.2s;
-          white-space: nowrap;
-        }
-
-        .load-button:hover:not(:disabled) {
-          background: #5a67d8;
-        }
-
-        .load-button:disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
-        }
-
-        .spinner {
-          width: 16px;
-          height: 16px;
-          border: 2px solid transparent;
-          border-top: 2px solid currentColor;
-          border-radius: 50%;
-          animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-          to {
-            transform: rotate(360deg);
-          }
-        }
-
-        .current-video {
-          background: #f8fafc;
-          padding: 16px;
-          border-radius: 8px;
-          margin-bottom: 20px;
-        }
-
-        .current-video p {
-          margin: 4px 0;
-          font-size: 0.9rem;
-          color: #475569;
-        }
-
-        .current-video strong {
-          color: #1e293b;
-        }
-
-        .video-status {
-          font-size: 0.8rem !important;
-          color: #64748b !important;
-        }
-
-        .instructions {
-          background: #f0f9ff;
-          padding: 16px;
-          border-radius: 8px;
-          border-left: 4px solid #0ea5e9;
-        }
-
-        .instructions h4 {
-          margin: 0 0 12px 0;
-          color: #0c4a6e;
-          font-size: 1rem;
-        }
-
-        .instructions ul {
-          margin: 0;
-          padding-left: 20px;
-        }
-
-        .instructions li {
-          margin: 6px 0;
-          color: #0369a1;
-          font-size: 0.9rem;
-          line-height: 1.4;
-        }
-
-        @media (max-width: 768px) {
-          .input-group {
-            flex-direction: column;
-          }
-
-          .load-button {
-            justify-content: center;
-          }
-        }
-      `}</style>
+      <div className={styles.googleDriveHelp}>
+        <h4>🔧 Google Drive API Setup:</h4>
+        <ol>
+          <li>Go to <a href="https://console.cloud.google.com" target="_blank" rel="noopener noreferrer">Google Cloud Console</a></li>
+          <li>Create a project and enable Google Drive API</li>
+          <li>Create service account credentials (JSON key file)</li>
+          <li>Add GOOGLE_SERVICE_ACCOUNT_KEY to server/.env file</li>
+          <li>Restart the server</li>
+        </ol>
+        <p><strong>How to share a Google Drive video (after API setup):</strong></p>
+        <ol>
+          <li>Upload your video file to Google Drive</li>
+          <li>Right-click the file and select "Share"</li>
+          <li>Change access to "Anyone with the link"</li>
+          <li>Copy the share link and paste it above</li>
+        </ol>
+      </div>
     </div>
   );
 };

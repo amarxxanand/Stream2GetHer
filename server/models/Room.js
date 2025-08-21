@@ -7,7 +7,11 @@ const roomSchema = new mongoose.Schema({
     unique: true,
     index: true
   },
-  currentVideoId: {
+  currentVideoUrl: {
+    type: String,
+    default: null
+  },
+  currentVideoTitle: {
     type: String,
     default: null
   },
@@ -15,6 +19,9 @@ const roomSchema = new mongoose.Schema({
     type: String,
     default: null
   },
+  participants: [{
+    type: String, // Socket IDs of connected users
+  }],
   lastKnownTime: {
     type: Number,
     default: 0

@@ -1,10 +1,12 @@
 # Stream2Gether - Real-Time Synchronized Media Platform
 
-A full-stack MERN application that enables real-time synchronized video watching experiences using the YouTube IFrame API and WebSocket communication.
+A full-stack MERN application that enables real-time synchronized video watching experiences supporting both YouTube videos and Google Drive files with WebSocket communication.
 
 ## 🚀 Features
 
-- **Real-time Synchronization**: Watch YouTube videos together in perfect sync
+- **Multi-Source Video Support**: Watch YouTube videos AND Google Drive files together in perfect sync
+- **Universal Format Support**: All video formats supported (MP4, MKV, AVI, MOV, WebM, FLV, WMV, etc.)
+- **Real-time Synchronization**: Perfect sync across all participants
 - **Host Authority Model**: Designated host controls playback for all participants
 - **Advanced Sync Mechanisms**: 
   - Automatic drift correction every 10 seconds
@@ -21,7 +23,7 @@ A full-stack MERN application that enables real-time synchronized video watching
 - **Frontend**: React 18, React Router, Socket.IO Client
 - **Backend**: Node.js, Express.js, Socket.IO
 - **Database**: MongoDB with Mongoose ODM
-- **Video Player**: YouTube IFrame API (direct integration)
+- **Video Player**: Multi-source support (YouTube IFrame API + Custom HTML5 Player)
 - **Real-time Communication**: WebSocket (Socket.IO)
 
 ### System Architecture
@@ -29,7 +31,7 @@ A full-stack MERN application that enables real-time synchronized video watching
 ┌─────────────────┐    WebSocket    ┌──────────────────┐    HTTP/DB    ┌─────────────┐
 │  React Client   │ ◄─────────────► │  Node.js Server │ ◄───────────► │  MongoDB    │
 │                 │                 │                  │               │             │
-│ - YouTube Player│                 │ - Socket.IO      │               │ - Rooms     │
+│ - Multi Player  │                 │ - Socket.IO      │               │ - Rooms     │
 │ - Chat UI       │                 │ - Express API    │               │ - Messages  │
 │ - User List     │                 │ - Room Logic     │               │ - Indexes   │
 └─────────────────┘                 └──────────────────┘               └─────────────┘
@@ -111,7 +113,7 @@ Make sure MongoDB is running on your system. The application will automatically 
 1. **Access the Application**: Open `http://localhost:5173` in your browser
 2. **Create a Room**: Enter your username and click "Create Room"
 3. **Invite Others**: Share the room URL or room ID with friends
-4. **Load a Video**: As the host, paste a YouTube URL or video ID to start watching
+4. **Load a Video**: As the host, paste a YouTube URL, video ID, or Google Drive URL to start watching
 5. **Enjoy Together**: Use the chat to communicate while watching synchronized content
 
 ## 🔧 API Endpoints
@@ -141,8 +143,11 @@ Make sure MongoDB is running on your system. The application will automatically 
 - **Drift Correction**: Clients auto-correct if more than 1.5s out of sync
 - **Buffer Recovery**: Automatic resync after buffering events
 
-### YouTube Integration
-- **Direct API**: Custom hook wrapping YouTube IFrame API
+### Multi-Source Video Integration
+- **YouTube Integration**: Custom hook wrapping YouTube IFrame API
+- **Google Drive Integration**: Direct video streaming from Google Drive
+- **Universal Format Support**: All video formats supported with smart detection
+- **Adaptive Playback**: Automatic source detection and player selection
 - **Programmatic Control**: Play, pause, seek, load video operations
 - **State Management**: React state synchronized with player events
 
@@ -194,7 +199,10 @@ const interval = setInterval(() => {
 
 ### Common Issues
 1. **Connection Failed**: Check if server is running and ports are correct
-2. **Video Not Loading**: Ensure YouTube video is public and embeddable
+2. **Video Not Loading**: 
+   - For YouTube: Ensure video is public and embeddable
+   - For Google Drive: Check file permissions and sharing settings
+   - For other formats: Verify file format compatibility
 3. **Sync Issues**: Check network latency and sync tolerance settings
 4. **Database Errors**: Verify MongoDB connection and permissions
 
