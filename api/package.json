@@ -1,9 +1,0 @@
-{
-  "name": "stream2gether-api",
-  "version": "1.0.0",
-  "description": "Vercel API functions for Stream2GetHer",
-  "dependencies": {
-    "mongoose": "^7.5.0",
-    "socket.io": "^4.7.2"
-  }
-}
