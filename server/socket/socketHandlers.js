@@ -6,8 +6,8 @@ const syncIntervals = new Map();
 
 // Rate limiting for join attempts
 const joinAttempts = new Map(); // socketId -> { count, lastAttempt }
-const JOIN_RATE_LIMIT = 3; // max 3 attempts
-const JOIN_RATE_WINDOW = 10000; // per 10 seconds
+const JOIN_RATE_LIMIT = 5; // max 5 attempts (increased from 3)
+const JOIN_RATE_WINDOW = 15000; // per 15 seconds (increased from 10)
 
 export const handleSocketConnection = (socket, io) => {
   console.log(`🔌 Socket connected: ${socket.id} from ${socket.handshake.address}`);
@@ -43,9 +43,9 @@ export const handleSocketConnection = (socket, io) => {
       
       // Prevent rapid rejoining - if socket was just created, wait a moment
       const timeSinceConnection = Date.now() - socket.connectionTime;
-      if (timeSinceConnection < 2000) {
+      if (timeSinceConnection < 1000) {
         console.log(`⚠️ Socket ${socket.id} trying to join too quickly after connection, delaying...`);
-        await new Promise(resolve => setTimeout(resolve, 2000 - timeSinceConnection));
+        await new Promise(resolve => setTimeout(resolve, 1000 - timeSinceConnection));
       }
       
       // Find the room in database

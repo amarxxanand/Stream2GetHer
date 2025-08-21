@@ -91,7 +91,7 @@ const RoomPage = () => {
       const timeSinceLastAttempt = now - lastJoinAttemptRef.current;
       
       // Prevent rapid join attempts (must be at least 3 seconds apart)
-      if (isJoiningRef.current || timeSinceLastAttempt < 3000 || hasJoinedRoomRef.current) {
+      if (isJoiningRef.current || (hasJoinedRoomRef.current && timeSinceLastAttempt < 5000)) {
         console.log(`� Preventing duplicate join: isJoining=${isJoiningRef.current}, timeSince=${timeSinceLastAttempt}ms, hasJoined=${hasJoinedRoomRef.current}`);
         return;
       }
@@ -108,15 +108,17 @@ const RoomPage = () => {
       joinTimeoutRef.current = setTimeout(() => {
         console.log(`🚪 Joining room: ${roomId} as ${username}`);
         socket.emit('join-room', { roomId, username });
-        hasJoinedRoomRef.current = true;
+        // Don't set hasJoinedRoomRef here - wait for successful join confirmation
         isJoiningRef.current = false;
         
         // Request user list after a delay to ensure we get updated count
         setTimeout(() => {
-          console.log('🔄 Requesting fresh user list after join');
-          socket.emit('request-user-list');
-        }, 2000);
-      }, 1000); // Increased delay to 1 second
+          if (socket.connected) {
+            console.log('🔄 Requesting fresh user list after join');
+            socket.emit('request-user-list');
+          }
+        }, 1000);
+      }, 500); // Reduced from 1 second to 500ms
     };
 
     const handleDisconnect = () => {
@@ -133,6 +135,9 @@ const RoomPage = () => {
     const handleSyncState = (data) => {
       const { videoUrl, videoTitle, time, isPlaying, isHost: hostStatus } = data;
       console.log('🔄 Received sync state:', data);
+      
+      // Mark that we successfully joined the room
+      hasJoinedRoomRef.current = true;
       
       setIsHost(hostStatus);
       
