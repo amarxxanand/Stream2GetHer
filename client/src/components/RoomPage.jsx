@@ -29,6 +29,12 @@ const RoomPage = () => {
   const ignoreNextStateChange = useRef(false);
   const lastSyncTime = useRef(0);
   const videoPlayerRef = useRef(null);
+  
+  // Join state tracking to prevent duplicate joins
+  const isJoiningRef = useRef(false);
+  const joinTimeoutRef = useRef(null);
+  const lastJoinAttemptRef = useRef(0);
+  const hasJoinedRoomRef = useRef(false);
 
   // Video player event handlers
   const onVideoStateChange = useCallback((event) => {
@@ -77,35 +83,44 @@ const RoomPage = () => {
   useEffect(() => {
     if (!socket) return;
 
-    // Track connection attempts to prevent rapid reconnections
-    let isJoining = false;
-    let joinTimeout = null;
-
     const handleConnect = () => {
       setIsConnected(true);
       
-      // Debounce join attempts to prevent rapid joining
-      if (isJoining) {
-        console.log('🔄 Already joining room, skipping duplicate join attempt');
+      // Aggressive duplicate join prevention
+      const now = Date.now();
+      const timeSinceLastAttempt = now - lastJoinAttemptRef.current;
+      
+      // Prevent rapid join attempts (must be at least 3 seconds apart)
+      if (isJoiningRef.current || timeSinceLastAttempt < 3000 || hasJoinedRoomRef.current) {
+        console.log(`� Preventing duplicate join: isJoining=${isJoiningRef.current}, timeSince=${timeSinceLastAttempt}ms, hasJoined=${hasJoinedRoomRef.current}`);
         return;
       }
       
-      isJoining = true;
+      isJoiningRef.current = true;
+      lastJoinAttemptRef.current = now;
       
-      // Add a small delay to ensure connection is stable
-      joinTimeout = setTimeout(() => {
+      // Clear any existing timeout
+      if (joinTimeoutRef.current) {
+        clearTimeout(joinTimeoutRef.current);
+      }
+      
+      // Add a delay to ensure connection is stable
+      joinTimeoutRef.current = setTimeout(() => {
         console.log(`🚪 Joining room: ${roomId} as ${username}`);
         socket.emit('join-room', { roomId, username });
-        isJoining = false;
-      }, 500);
+        hasJoinedRoomRef.current = true;
+        isJoiningRef.current = false;
+      }, 1000); // Increased delay to 1 second
     };
 
     const handleDisconnect = () => {
       setIsConnected(false);
-      isJoining = false;
-      if (joinTimeout) {
-        clearTimeout(joinTimeout);
-        joinTimeout = null;
+      // Reset join state on disconnect
+      isJoiningRef.current = false;
+      hasJoinedRoomRef.current = false;
+      if (joinTimeoutRef.current) {
+        clearTimeout(joinTimeoutRef.current);
+        joinTimeoutRef.current = null;
       }
     };
 
@@ -253,9 +268,14 @@ const RoomPage = () => {
 
     return () => {
       // Clear any pending join timeout
-      if (joinTimeout) {
-        clearTimeout(joinTimeout);
+      if (joinTimeoutRef.current) {
+        clearTimeout(joinTimeoutRef.current);
+        joinTimeoutRef.current = null;
       }
+      
+      // Reset join state
+      isJoiningRef.current = false;
+      hasJoinedRoomRef.current = false;
       
       socket.off('connect', handleConnect);
       socket.off('disconnect', handleDisconnect);

@@ -9,9 +9,9 @@ export const socket = io(URL, {
   pingTimeout: 60000, // Increase ping timeout
   pingInterval: 25000, // Increase ping interval
   reconnection: true,
-  reconnectionAttempts: 5, // Reduce attempts to prevent rapid reconnections
-  reconnectionDelay: 2000, // Increase initial delay
-  reconnectionDelayMax: 10000, // Increase max delay
-  randomizationFactor: 0.5, // Add randomization to prevent thundering herd
+  reconnectionAttempts: 3, // Further reduce attempts to prevent rapid reconnections
+  reconnectionDelay: 5000, // Increase initial delay to 5 seconds
+  reconnectionDelayMax: 15000, // Increase max delay to 15 seconds
+  randomizationFactor: 0.8, // Increase randomization to prevent thundering herd
   forceNew: false // Reuse connection if possible
 });

@@ -4,6 +4,11 @@ import { Room, Message } from '../models/index.js';
 const activeRooms = new Map();
 const syncIntervals = new Map();
 
+// Rate limiting for join attempts
+const joinAttempts = new Map(); // socketId -> { count, lastAttempt }
+const JOIN_RATE_LIMIT = 3; // max 3 attempts
+const JOIN_RATE_WINDOW = 10000; // per 10 seconds
+
 export const handleSocketConnection = (socket, io) => {
   console.log(`🔌 Socket connected: ${socket.id} from ${socket.handshake.address}`);
   
@@ -15,11 +20,32 @@ export const handleSocketConnection = (socket, io) => {
     try {
       const { roomId, username } = data;
       
+      // Rate limiting check
+      const now = Date.now();
+      const attempts = joinAttempts.get(socket.id) || { count: 0, lastAttempt: 0 };
+      
+      // Reset counter if window has passed
+      if (now - attempts.lastAttempt > JOIN_RATE_WINDOW) {
+        attempts.count = 0;
+      }
+      
+      // Check rate limit
+      if (attempts.count >= JOIN_RATE_LIMIT) {
+        console.log(`🚫 Rate limit exceeded for ${socket.id}, ignoring join attempt`);
+        socket.emit('error', { message: 'Too many join attempts. Please wait.' });
+        return;
+      }
+      
+      // Update attempts
+      attempts.count++;
+      attempts.lastAttempt = now;
+      joinAttempts.set(socket.id, attempts);
+      
       // Prevent rapid rejoining - if socket was just created, wait a moment
       const timeSinceConnection = Date.now() - socket.connectionTime;
-      if (timeSinceConnection < 1000) {
+      if (timeSinceConnection < 2000) {
         console.log(`⚠️ Socket ${socket.id} trying to join too quickly after connection, delaying...`);
-        await new Promise(resolve => setTimeout(resolve, 1000 - timeSinceConnection));
+        await new Promise(resolve => setTimeout(resolve, 2000 - timeSinceConnection));
       }
       
       // Find the room in database
@@ -240,6 +266,9 @@ export const handleSocketConnection = (socket, io) => {
     const connectionDuration = disconnectTime - socket.connectionTime;
     
     console.log(`🔌 Socket disconnected: ${socket.id}, reason: ${reason}, duration: ${connectionDuration}ms`);
+    
+    // Clean up rate limiting data
+    joinAttempts.delete(socket.id);
     
     // If connection was very short (less than 5 seconds), it might be a connection issue
     if (connectionDuration < 5000) {
