@@ -89,9 +89,23 @@ const RoomPage = () => {
     const handleConnect = () => {
       setIsConnected(true);
       
+      // If we already successfully joined, don't try again
+      if (hasJoinedRoomRef.current) {
+        console.log(`✅ Instance ${instanceId} already joined, skipping duplicate connect`);
+        return;
+      }
+      
       // Use singleton socket manager to prevent duplicate connections
       if (!socketManager.canJoinRoom(roomId, username)) {
-        console.log(`🚫 Instance ${instanceId} blocked by SocketManager`);
+        console.log(`🚫 Instance ${instanceId} blocked by SocketManager - will retry in 2.5 seconds`);
+        
+        // Retry after a short delay if blocked (only if we haven't joined yet)
+        setTimeout(() => {
+          if (socket.connected && !hasJoinedRoomRef.current) {
+            console.log(`🔄 Instance ${instanceId} retrying join after delay`);
+            handleConnect();
+          }
+        }, 2500);
         return;
       }
       
@@ -107,12 +121,9 @@ const RoomPage = () => {
       
       // Delay join to ensure socket is fully ready
       connectionTimeout = setTimeout(() => {
-        if (socket.connected) {
+        if (socket.connected && !hasJoinedRoomRef.current) {
           console.log(`🚪 Instance ${instanceId} joining room: ${roomId} as ${username}`);
           socket.emit('join-room', { roomId, username });
-          
-          // Mark that we joined for this instance
-          hasJoinedRoomRef.current = true;
           
           // Request user list after join
           setTimeout(() => {
@@ -122,7 +133,7 @@ const RoomPage = () => {
             }
           }, 1000);
         }
-      }, 1000);
+      }, 500); // Reduced delay
     };
 
     const handleDisconnect = () => {
@@ -131,7 +142,7 @@ const RoomPage = () => {
       hasJoinedRoomRef.current = false;
       
       // Clear singleton manager state
-      socketManager.clearConnection(roomId);
+      socketManager.clearConnection(roomId, username);
       
       if (connectionTimeout) {
         clearTimeout(connectionTimeout);
@@ -143,8 +154,9 @@ const RoomPage = () => {
       const { videoUrl, videoTitle, time, isPlaying, isHost: hostStatus } = data;
       console.log('🔄 Received sync state:', data);
       
-      // Mark that we successfully joined the room
+      // Mark that we successfully joined the room - this confirms server accepted our join
       hasJoinedRoomRef.current = true;
+      console.log(`✅ Instance ${instanceId} confirmed joined room successfully`);
       
       setIsHost(hostStatus);
       
@@ -332,7 +344,7 @@ const RoomPage = () => {
       }
       
       // Clear singleton manager state on cleanup
-      socketManager.clearConnection(roomId);
+      socketManager.clearConnection(roomId, username);
       
       // Reset local state
       hasConnected = false;
