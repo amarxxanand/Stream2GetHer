@@ -126,29 +126,45 @@ const RoomPage = () => {
 
     const handleSyncState = (data) => {
       const { videoUrl, videoTitle, time, isPlaying, isHost: hostStatus } = data;
+      console.log('🔄 Received sync state:', data);
+      
       setIsHost(hostStatus);
       
       if (videoUrl && videoUrl !== currentVideoUrl) {
+        console.log('📺 Setting video URL:', videoUrl);
         setCurrentVideoUrl(videoUrl);
         setCurrentVideoTitle(videoTitle);
       }
       
-      if (videoPlayerRef.current && time !== null) {
-        const currentTime = videoPlayerRef.current.getCurrentTime();
-        const timeDiff = Math.abs(currentTime - time);
+      // Wait for video to be ready before applying time/play state
+      if (videoPlayerRef.current && time !== null && time !== undefined) {
+        const applyTimeAndPlayState = () => {
+          const currentTime = videoPlayerRef.current.getCurrentTime();
+          const timeDiff = Math.abs(currentTime - time);
+          
+          console.log(`⏰ Syncing time: current=${currentTime}, target=${time}, diff=${timeDiff}`);
+          
+          if (timeDiff > syncTolerance) {
+            ignoreNextStateChange.current = true;
+            videoPlayerRef.current.seekTo(time);
+          }
+          
+          if (isPlaying !== null && isPlaying !== undefined) {
+            console.log(`▶️ Syncing play state: ${isPlaying}`);
+            ignoreNextStateChange.current = true;
+            if (isPlaying) {
+              videoPlayerRef.current.play();
+            } else {
+              videoPlayerRef.current.pause();
+            }
+          }
+        };
         
-        if (timeDiff > syncTolerance) {
-          ignoreNextStateChange.current = true;
-          videoPlayerRef.current.seekTo(time);
-        }
-      }
-      
-      if (videoPlayerRef.current && isPlaying !== null) {
-        ignoreNextStateChange.current = true;
-        if (isPlaying) {
-          videoPlayerRef.current.play();
+        // Apply immediately if video is ready, otherwise wait a bit
+        if (videoPlayerRef.current.getVideoInfo) {
+          applyTimeAndPlayState();
         } else {
-          videoPlayerRef.current.pause();
+          setTimeout(applyTimeAndPlayState, 2000);
         }
       }
     };
@@ -227,29 +243,50 @@ const RoomPage = () => {
     };
 
     const handleUserJoined = (data) => {
-      console.log(`${data.username} joined the room`);
+      console.log(`👋 ${data.username} joined the room`);
     };
 
     const handleUserLeft = (data) => {
-      console.log(`${data.username} left the room`);
+      console.log(`👋 ${data.username} left the room`);
     };
 
     const handleUserListUpdated = (userList) => {
-      setUsers(userList);
+      console.log('👥 User list updated:', userList);
+      if (Array.isArray(userList)) {
+        setUsers(userList);
+      } else {
+        console.error('❌ Invalid user list received:', userList);
+      }
     };
 
     const handleNewChatMessage = (message) => {
-      setMessages(prev => [...prev, message]);
+      console.log('💬 New chat message:', message);
+      if (message && message.message && message.author) {
+        setMessages(prev => [...prev, message]);
+      } else {
+        console.error('❌ Invalid chat message format:', message);
+      }
     };
 
     const handleError = (error) => {
-      console.error('Socket error:', error);
-      alert(error.message);
+      console.error('🚨 Socket error:', error);
+      alert(`Connection Error: ${error.message}`);
+    };
+
+    // Add connection status logging
+    const handleConnectError = (error) => {
+      console.error('🚨 Connection error:', error);
+    };
+
+    const handleReconnect = (attemptNumber) => {
+      console.log(`🔄 Reconnecting... attempt ${attemptNumber}`);
     };
 
     // Register event listeners
     socket.on('connect', handleConnect);
     socket.on('disconnect', handleDisconnect);
+    socket.on('connect_error', handleConnectError);
+    socket.on('reconnect', handleReconnect);
     socket.on('sync-state', handleSyncState);
     socket.on('host-assigned', handleHostAssigned);
     socket.on('server:play', handleServerPlay);
@@ -279,6 +316,8 @@ const RoomPage = () => {
       
       socket.off('connect', handleConnect);
       socket.off('disconnect', handleDisconnect);
+      socket.off('connect_error', handleConnectError);
+      socket.off('reconnect', handleReconnect);
       socket.off('sync-state', handleSyncState);
       socket.off('host-assigned', handleHostAssigned);
       socket.off('server:play', handleServerPlay);
@@ -324,9 +363,23 @@ const RoomPage = () => {
 
   // Send chat message
   const sendMessage = (message) => {
-    if (socket && message.trim()) {
-      socket.emit('chat-message', { message: message.trim() });
+    if (!socket) {
+      console.error('❌ Socket not available for sending message');
+      return;
     }
+    
+    if (!socket.connected) {
+      console.error('❌ Socket not connected for sending message');
+      return;
+    }
+    
+    if (!message || !message.trim()) {
+      console.error('❌ Empty message cannot be sent');
+      return;
+    }
+    
+    console.log('💬 Sending message:', message.trim());
+    socket.emit('chat-message', { message: message.trim() });
   };
 
   if (!roomId) {

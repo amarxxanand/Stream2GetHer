@@ -102,13 +102,36 @@ export const handleSocketConnection = (socket, io) => {
       }
       
       // Send current state to the new user
-      socket.emit('sync-state', {
+      const syncState = {
         videoUrl: room.currentVideoUrl,
         videoTitle: room.currentVideoTitle,
         time: room.lastKnownTime,
         isPlaying: room.lastKnownState,
         isHost: activeRoom.hostSocketId === socket.id
-      });
+      };
+      
+      console.log(`📤 Sending sync state to ${socket.username}:`, syncState);
+      socket.emit('sync-state', syncState);
+      
+      // Send existing chat messages to the new user
+      try {
+        const existingMessages = await Message.find({ roomId })
+          .sort({ timestamp: 1 })
+          .limit(50); // Last 50 messages
+        
+        if (existingMessages.length > 0) {
+          console.log(`💬 Sending ${existingMessages.length} existing messages to ${socket.username}`);
+          for (const msg of existingMessages) {
+            socket.emit('new-chat-message', {
+              author: msg.author,
+              message: msg.message,
+              timestamp: msg.timestamp
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error sending existing messages:', error);
+      }
       
       // Notify other users about new participant
       socket.to(roomId).emit('user-joined', {
@@ -118,6 +141,7 @@ export const handleSocketConnection = (socket, io) => {
       
       // Send updated user list
       const userList = Array.from(activeRoom.users.values());
+      console.log(`👥 Sending user list to room ${roomId}:`, userList);
       io.to(roomId).emit('user-list-updated', userList);
       
       console.log(`✅ ${socket.username} joined room ${roomId} (${activeRoom.users.size} users total)`);
@@ -236,27 +260,45 @@ export const handleSocketConnection = (socket, io) => {
   socket.on('chat-message', async (data) => {
     try {
       const { message } = data;
-      const author = socket.username;
+      
+      if (!socket.roomId) {
+        console.error(`❌ User ${socket.id} trying to send message without being in a room`);
+        socket.emit('error', { message: 'You must join a room to send messages' });
+        return;
+      }
+      
+      if (!message || !message.trim()) {
+        console.error(`❌ Empty message from ${socket.username}`);
+        return;
+      }
+      
+      const author = socket.username || `User-${socket.id.substring(0, 6)}`;
       const timestamp = new Date();
+      
+      console.log(`💬 Chat message from ${author} in room ${socket.roomId}: ${message.trim()}`);
       
       // Save to database
       const chatMessage = new Message({
         roomId: socket.roomId,
         author,
-        message,
+        message: message.trim(),
         timestamp
       });
       await chatMessage.save();
       
       // Broadcast to all users in room
-      io.to(socket.roomId).emit('new-chat-message', {
+      const messageData = {
         author,
-        message,
+        message: message.trim(),
         timestamp
-      });
+      };
+      
+      io.to(socket.roomId).emit('new-chat-message', messageData);
+      console.log(`📤 Broadcasted message to room ${socket.roomId}`);
       
     } catch (error) {
       console.error('Error handling chat message:', error);
+      socket.emit('error', { message: 'Failed to send message' });
     }
   });
   
