@@ -4,10 +4,13 @@ import { Room, Message } from '../models/index.js';
 const activeRooms = new Map();
 const syncIntervals = new Map();
 
-// Rate limiting for join attempts
+// Enhanced tracking for connection management
 const joinAttempts = new Map(); // socketId -> { count, lastAttempt }
-const JOIN_RATE_LIMIT = 5; // max 5 attempts (increased from 3)
-const JOIN_RATE_WINDOW = 15000; // per 15 seconds (increased from 10)
+const activeConnections = new Map(); // roomId+username -> socketId
+const userConnections = new Map(); // socketId -> { roomId, username }
+
+const JOIN_RATE_LIMIT = 5; // max 5 attempts
+const JOIN_RATE_WINDOW = 15000; // per 15 seconds
 
 export const handleSocketConnection = (socket, io) => {
   console.log(`🔌 Socket connected: ${socket.id} from ${socket.handshake.address}`);
@@ -19,6 +22,24 @@ export const handleSocketConnection = (socket, io) => {
   socket.on('join-room', async (data) => {
     try {
       const { roomId, username } = data;
+      
+      // Check for duplicate connections (same user already in same room)
+      const connectionKey = `${roomId}:${username}`;
+      const existingSocketId = activeConnections.get(connectionKey);
+      
+      if (existingSocketId && existingSocketId !== socket.id) {
+        // Check if existing socket is still connected
+        const existingSocket = io.sockets.sockets.get(existingSocketId);
+        if (existingSocket && existingSocket.connected) {
+          console.log(`🚫 Duplicate connection detected: ${username} already in ${roomId} with socket ${existingSocketId}`);
+          socket.emit('error', { message: 'You are already connected to this room from another tab/device.' });
+          return;
+        } else {
+          // Clean up stale connection
+          console.log(`🧹 Cleaning up stale connection for ${username} in ${roomId}`);
+          activeConnections.delete(connectionKey);
+        }
+      }
       
       // Rate limiting check
       const now = Date.now();
@@ -48,11 +69,22 @@ export const handleSocketConnection = (socket, io) => {
         await new Promise(resolve => setTimeout(resolve, 1000 - timeSinceConnection));
       }
       
-      // Find the room in database
-      const room = await Room.findOne({ roomId });
-      if (!room) {
-        socket.emit('error', { message: 'Room not found' });
-        return;
+      // Find the room in database (fallback to in-memory if DB unavailable)
+      let room;
+      try {
+        room = await Room.findOne({ roomId });
+        if (!room) {
+          // Create room in database if not exists
+          room = await Room.create({
+            roomId,
+            hostUserId: socket.id,
+            createdAt: new Date()
+          });
+        }
+      } catch (error) {
+        console.log('⚠️ MongoDB not available, using in-memory room management');
+        // Continue without database - use in-memory room management only
+        room = { roomId }; // Minimal room object
       }
       
       // Check if this socket is already in the room (prevent double joins)
@@ -65,6 +97,11 @@ export const handleSocketConnection = (socket, io) => {
       socket.join(roomId);
       socket.roomId = roomId;
       socket.username = username || `User-${socket.id.substring(0, 6)}`;
+      
+      // Track this connection
+      const userConnectionKey = `${roomId}:${socket.username}`;
+      activeConnections.set(userConnectionKey, socket.id);
+      userConnections.set(socket.id, { roomId, username: socket.username });
       
       // Initialize room in memory if not exists
       if (!activeRooms.has(roomId)) {
@@ -143,7 +180,8 @@ export const handleSocketConnection = (socket, io) => {
           }
         }
       } catch (error) {
-        console.error('Error sending existing messages:', error);
+        console.log('⚠️ Could not load existing messages (MongoDB unavailable)');
+        // Continue without historical messages
       }
       
       // Notify other users about new participant FIRST
@@ -343,6 +381,15 @@ export const handleSocketConnection = (socket, io) => {
     
     // Clean up rate limiting data
     joinAttempts.delete(socket.id);
+    
+    // Clean up connection tracking
+    const userConnection = userConnections.get(socket.id);
+    if (userConnection) {
+      const connectionKey = `${userConnection.roomId}:${userConnection.username}`;
+      activeConnections.delete(connectionKey);
+      userConnections.delete(socket.id);
+      console.log(`🧹 Cleaned up connection tracking for ${userConnection.username} in ${userConnection.roomId}`);
+    }
     
     // If connection was very short (less than 5 seconds), it might be a connection issue
     if (connectionDuration < 5000) {

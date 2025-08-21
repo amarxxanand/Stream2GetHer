@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { useSocket } from '../contexts/SocketContext';
+import { socketManager } from '../services/socketManager';
 import VideoPlayer from './VideoPlayer';
 import VideoControls from './VideoControls';
 import Chat from './Chat';
@@ -30,10 +31,7 @@ const RoomPage = () => {
   const lastSyncTime = useRef(0);
   const videoPlayerRef = useRef(null);
   
-  // Join state tracking to prevent duplicate joins
-  const isJoiningRef = useRef(false);
-  const joinTimeoutRef = useRef(null);
-  const lastJoinAttemptRef = useRef(0);
+  // Simplified join state tracking
   const hasJoinedRoomRef = useRef(false);
 
   // Video player event handlers
@@ -83,52 +81,61 @@ const RoomPage = () => {
   useEffect(() => {
     if (!socket) return;
 
+    // Create a unique instance ID for this component instance
+    const instanceId = Math.random().toString(36).substr(2, 9);
+    let connectionTimeout = null;
+    let hasConnected = false;
+
     const handleConnect = () => {
       setIsConnected(true);
       
-      // Aggressive duplicate join prevention
-      const now = Date.now();
-      const timeSinceLastAttempt = now - lastJoinAttemptRef.current;
-      
-      // Prevent rapid join attempts (must be at least 3 seconds apart)
-      if (isJoiningRef.current || (hasJoinedRoomRef.current && timeSinceLastAttempt < 5000)) {
-        console.log(`� Preventing duplicate join: isJoining=${isJoiningRef.current}, timeSince=${timeSinceLastAttempt}ms, hasJoined=${hasJoinedRoomRef.current}`);
+      // Use singleton socket manager to prevent duplicate connections
+      if (!socketManager.canJoinRoom(roomId, username)) {
+        console.log(`🚫 Instance ${instanceId} blocked by SocketManager`);
         return;
       }
       
-      isJoiningRef.current = true;
-      lastJoinAttemptRef.current = now;
+      hasConnected = true;
       
-      // Clear any existing timeout
-      if (joinTimeoutRef.current) {
-        clearTimeout(joinTimeoutRef.current);
+      // Clear any existing connection timeout
+      if (connectionTimeout) {
+        clearTimeout(connectionTimeout);
       }
       
-      // Add a delay to ensure connection is stable
-      joinTimeoutRef.current = setTimeout(() => {
-        console.log(`🚪 Joining room: ${roomId} as ${username}`);
-        socket.emit('join-room', { roomId, username });
-        // Don't set hasJoinedRoomRef here - wait for successful join confirmation
-        isJoiningRef.current = false;
-        
-        // Request user list after a delay to ensure we get updated count
-        setTimeout(() => {
-          if (socket.connected) {
-            console.log('🔄 Requesting fresh user list after join');
-            socket.emit('request-user-list');
-          }
-        }, 1000);
-      }, 500); // Reduced from 1 second to 500ms
+      // Record this join attempt in the singleton manager
+      socketManager.recordJoinAttempt(roomId, username);
+      
+      // Delay join to ensure socket is fully ready
+      connectionTimeout = setTimeout(() => {
+        if (socket.connected) {
+          console.log(`🚪 Instance ${instanceId} joining room: ${roomId} as ${username}`);
+          socket.emit('join-room', { roomId, username });
+          
+          // Mark that we joined for this instance
+          hasJoinedRoomRef.current = true;
+          
+          // Request user list after join
+          setTimeout(() => {
+            if (socket.connected) {
+              console.log(`🔄 Instance ${instanceId} requesting user list`);
+              socket.emit('request-user-list');
+            }
+          }, 1000);
+        }
+      }, 1000);
     };
 
     const handleDisconnect = () => {
       setIsConnected(false);
-      // Reset join state on disconnect
-      isJoiningRef.current = false;
+      hasConnected = false;
       hasJoinedRoomRef.current = false;
-      if (joinTimeoutRef.current) {
-        clearTimeout(joinTimeoutRef.current);
-        joinTimeoutRef.current = null;
+      
+      // Clear singleton manager state
+      socketManager.clearConnection(roomId);
+      
+      if (connectionTimeout) {
+        clearTimeout(connectionTimeout);
+        connectionTimeout = null;
       }
     };
 
@@ -318,14 +325,17 @@ const RoomPage = () => {
     socket.connect();
 
     return () => {
-      // Clear any pending join timeout
-      if (joinTimeoutRef.current) {
-        clearTimeout(joinTimeoutRef.current);
-        joinTimeoutRef.current = null;
+      // Clear any pending connection timeout
+      if (connectionTimeout) {
+        clearTimeout(connectionTimeout);
+        connectionTimeout = null;
       }
       
-      // Reset join state
-      isJoiningRef.current = false;
+      // Clear singleton manager state on cleanup
+      socketManager.clearConnection(roomId);
+      
+      // Reset local state
+      hasConnected = false;
       hasJoinedRoomRef.current = false;
       
       socket.off('connect', handleConnect);

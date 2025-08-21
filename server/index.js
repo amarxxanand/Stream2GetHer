@@ -119,16 +119,18 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// MongoDB connection with better error handling
+// MongoDB connection with better error handling and fallback
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/stream2gether', {
+    const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/stream2gether';
+    const conn = await mongoose.connect(mongoUri, {
       // Remove deprecated options that are now defaults in Mongoose 6+
     });
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
+    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
-    console.error('MongoDB connection error:', error);
-    process.exit(1);
+    console.error('❌ MongoDB connection error:', error);
+    console.log('🔄 Continuing without MongoDB - using in-memory storage only');
+    // Don't exit, continue with socket functionality
   }
 };
 
