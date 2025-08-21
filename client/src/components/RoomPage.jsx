@@ -110,6 +110,12 @@ const RoomPage = () => {
         socket.emit('join-room', { roomId, username });
         hasJoinedRoomRef.current = true;
         isJoiningRef.current = false;
+        
+        // Request user list after a delay to ensure we get updated count
+        setTimeout(() => {
+          console.log('🔄 Requesting fresh user list after join');
+          socket.emit('request-user-list');
+        }, 2000);
       }, 1000); // Increased delay to 1 second
     };
 
@@ -244,16 +250,19 @@ const RoomPage = () => {
 
     const handleUserJoined = (data) => {
       console.log(`👋 ${data.username} joined the room`);
+      // Note: User list will be updated via separate user-list-updated event
     };
 
     const handleUserLeft = (data) => {
       console.log(`👋 ${data.username} left the room`);
+      // Note: User list will be updated via separate user-list-updated event
     };
 
     const handleUserListUpdated = (userList) => {
-      console.log('👥 User list updated:', userList);
+      console.log(`👥 User list updated - received ${userList?.length || 0} users:`, userList);
       if (Array.isArray(userList)) {
         setUsers(userList);
+        console.log(`✅ User list state updated with ${userList.length} users`);
       } else {
         console.error('❌ Invalid user list received:', userList);
       }

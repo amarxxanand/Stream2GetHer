@@ -113,6 +113,19 @@ export const handleSocketConnection = (socket, io) => {
       console.log(`📤 Sending sync state to ${socket.username}:`, syncState);
       socket.emit('sync-state', syncState);
       
+      // If there's an active video, notify all users about the current state
+      if (room.currentVideoUrl) {
+        console.log(`📺 Broadcasting current video state to all users in room ${roomId}`);
+        io.to(roomId).emit('server:sync-time', { time: room.lastKnownTime });
+        
+        // If video is playing, sync play state
+        if (room.lastKnownState) {
+          io.to(roomId).emit('server:play', { time: room.lastKnownTime });
+        } else {
+          io.to(roomId).emit('server:pause', { time: room.lastKnownTime });
+        }
+      }
+      
       // Send existing chat messages to the new user
       try {
         const existingMessages = await Message.find({ roomId })
@@ -133,16 +146,23 @@ export const handleSocketConnection = (socket, io) => {
         console.error('Error sending existing messages:', error);
       }
       
-      // Notify other users about new participant
+      // Notify other users about new participant FIRST
+      console.log(`📢 Notifying existing users about ${socket.username} joining room ${roomId}`);
       socket.to(roomId).emit('user-joined', {
         username: socket.username,
         userId: socket.id
       });
       
-      // Send updated user list
+      // Send updated user list to ALL users in the room (including the new joiner)
       const userList = Array.from(activeRoom.users.values());
-      console.log(`👥 Sending user list to room ${roomId}:`, userList);
+      console.log(`👥 Broadcasting updated user list to ALL users in room ${roomId}:`, userList);
+      console.log(`👥 Room has ${activeRoom.users.size} users total`);
+      
+      // Use io.to() to send to ALL users in the room
       io.to(roomId).emit('user-list-updated', userList);
+      
+      // Also emit to the new user specifically to ensure they get it
+      socket.emit('user-list-updated', userList);
       
       console.log(`✅ ${socket.username} joined room ${roomId} (${activeRoom.users.size} users total)`);
       
@@ -256,6 +276,18 @@ export const handleSocketConnection = (socket, io) => {
     }
   });
   
+  // Handle request for fresh user list
+  socket.on('request-user-list', () => {
+    if (socket.roomId) {
+      const activeRoom = activeRooms.get(socket.roomId);
+      if (activeRoom) {
+        const userList = Array.from(activeRoom.users.values());
+        console.log(`🔄 User list requested by ${socket.username}, sending ${userList.length} users`);
+        socket.emit('user-list-updated', userList);
+      }
+    }
+  });
+  
   // Chat message handling
   socket.on('chat-message', async (data) => {
     try {
@@ -355,16 +387,21 @@ export const handleSocketConnection = (socket, io) => {
           }
         }
         
-        // Notify remaining users
+        // Notify remaining users about the departure
+        console.log(`📢 Notifying remaining users about ${socket.username || socket.id} leaving room ${socket.roomId}`);
         socket.to(socket.roomId).emit('user-left', {
           username: socket.username,
           userId: socket.id
         });
         
-        // Send updated user list
+        // Send updated user list to ALL remaining users
         if (activeRoom.users.size > 0) {
           const userList = Array.from(activeRoom.users.values());
+          console.log(`👥 Broadcasting updated user list after ${socket.username || socket.id} left room ${socket.roomId}:`, userList);
+          console.log(`👥 Room now has ${activeRoom.users.size} users remaining`);
           io.to(socket.roomId).emit('user-list-updated', userList);
+        } else {
+          console.log(`🏠 Room ${socket.roomId} is now empty`);
         }
         
         console.log(`📤 ${socket.username || socket.id} left room ${socket.roomId} (${activeRoom.users.size} users remaining)`);
