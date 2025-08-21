@@ -3,6 +3,7 @@ import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { useSocket } from '../contexts/SocketContext';
 import { connectSocket } from '../socket';
 import { socketManager } from '../services/socketManager';
+import { componentRegistry } from '../services/componentRegistry';
 import VideoPlayer from './VideoPlayer';
 import VideoControls from './VideoControls';
 import Chat from './Chat';
@@ -13,23 +14,46 @@ import styles from './RoomPage.module.css';
 // Global component instance manager to prevent multiple instances
 const componentInstances = new Map();
 const componentStates = new Map();
+const persistentComponents = new Map();
 
 // Global window-level protection against multiple instances
 if (!window.roomPageManager) {
   window.roomPageManager = {
     activeRooms: new Set(),
+    mountCounts: new Map(),
     isRoomActive: (roomKey) => window.roomPageManager.activeRooms.has(roomKey),
-    registerRoom: (roomKey) => window.roomPageManager.activeRooms.add(roomKey),
-    unregisterRoom: (roomKey) => window.roomPageManager.activeRooms.delete(roomKey)
+    registerRoom: (roomKey) => {
+      const count = window.roomPageManager.mountCounts.get(roomKey) || 0;
+      window.roomPageManager.mountCounts.set(roomKey, count + 1);
+      window.roomPageManager.activeRooms.add(roomKey);
+      console.log(`🔢 Room ${roomKey} mount count: ${count + 1}`);
+      return count === 0; // Only allow the first mount
+    },
+    unregisterRoom: (roomKey) => {
+      const count = window.roomPageManager.mountCounts.get(roomKey) || 1;
+      if (count <= 1) {
+        window.roomPageManager.activeRooms.delete(roomKey);
+        window.roomPageManager.mountCounts.delete(roomKey);
+        console.log(`🗑️ Room ${roomKey} fully cleaned up`);
+      } else {
+        window.roomPageManager.mountCounts.set(roomKey, count - 1);
+        console.log(`🔢 Room ${roomKey} mount count decreased to: ${count - 1}`);
+      }
+    }
   };
 }
 
-const RoomPage = () => {
+const RoomPage = React.memo(() => {
   const { roomId } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const socket = useSocket();
   const username = searchParams.get('username') || `User-${Math.random().toString(36).substr(2, 6)}`;
+
+  // Create a stable component key for this exact room-username combination
+  const componentKey = `${roomId}-${username}`;
+  
+  console.log(`🏗️ RoomPage component rendering for ${componentKey}`);
 
   const [isHost, setIsHost] = useState(false);
   const [currentVideoUrl, setCurrentVideoUrl] = useState(null);
@@ -92,48 +116,42 @@ const RoomPage = () => {
     }
   }, [isHost, socket]);
 
-  // Socket connection and event handlers
+  // Socket connection and event handlers with enhanced protection
   useEffect(() => {
     // Create a component key based on roomId and username
     const componentKey = `${roomId}-${username}`;
     
-    // Check window-level protection first
-    if (window.roomPageManager.isRoomActive(componentKey)) {
-      console.log(`🚫 Window-level protection: Room ${componentKey} already has an active instance, blocking duplicate`);
+    // Check component registry first - this is the most reliable protection
+    if (!componentRegistry.canMount(componentKey)) {
+      console.log(`🚫 ComponentRegistry: Mount blocked for ${componentKey}`);
+      
+      // Return a cleanup function that does nothing
       return () => {
-        console.log(`🔄 Blocked component instance for ${componentKey} unmounting`);
+        console.log(`🔄 Blocked mount cleanup for ${componentKey}`);
       };
     }
     
-    // Register at window level
-    window.roomPageManager.registerRoom(componentKey);
-    
-    // Check if this exact component instance already exists and is active
-    if (componentInstances.has(componentKey)) {
-      const existingInstance = componentInstances.get(componentKey);
-      console.log(`🚫 Component instance for ${componentKey} already exists (${existingInstance}), preventing duplicate`);
-      
-      // Share state from existing instance
-      const sharedState = componentStates.get(componentKey);
-      if (sharedState) {
-        setIsConnected(sharedState.isConnected || false);
-        setUsers(sharedState.users || []);
-        setMessages(sharedState.messages || []);
-        setIsHost(sharedState.isHost || false);
-        setCurrentVideoUrl(sharedState.currentVideoUrl || null);
-        setCurrentVideoTitle(sharedState.currentVideoTitle || null);
-      }
-      
-      return () => {
-        // Don't cleanup if there's already an active instance
-        console.log(`🔄 Shared component instance for ${componentKey} unmounting (keeping main instance active)`);
-      };
-    }
-    
-    // Register this as the active instance
+    // Create instance ID and register with component registry
     const instanceId = Math.random().toString(36).substr(2, 9);
-    componentInstances.set(componentKey, instanceId);
-    console.log(`🆔 RoomPage instance ${instanceId} registered as primary for ${componentKey}`);
+    if (!componentRegistry.register(componentKey, instanceId)) {
+      console.log(`🚫 ComponentRegistry: Registration failed for ${componentKey}`);
+      return () => {
+        console.log(`� Failed registration cleanup for ${componentKey}`);
+      };
+    }
+    
+    console.log(`🆔 RoomPage instance ${instanceId} successfully registered for ${componentKey} (attempt #${componentRegistry.getMountAttempts(componentKey)})`);
+    
+    // Additional window-level protection
+    const isFirstMount = window.roomPageManager.registerRoom(componentKey);
+    if (!isFirstMount) {
+      console.log(`� Window-level: Room ${componentKey} already has an active mount`);
+      componentRegistry.unregister(componentKey);
+      return () => {
+        console.log(`🔄 Window-blocked mount cleanup for ${componentKey}`);
+        window.roomPageManager.unregisterRoom(componentKey);
+      };
+    }
     
     // Use singleton socket connection
     const socket = connectSocket();
@@ -428,10 +446,13 @@ const RoomPage = () => {
     }
 
     return () => {
-      console.log(`🧹 Instance ${instanceId} cleaning up`);
+      console.log(`🧹 Instance ${instanceId} cleaning up for ${componentKey}`);
       
-      // Only cleanup if this is the primary instance
-      if (componentInstances.get(componentKey) === instanceId) {
+      // Always unregister from component registry first
+      const wasRegistered = componentRegistry.unregister(componentKey);
+      
+      // Only do full cleanup if this was the registered instance
+      if (wasRegistered) {
         console.log(`🔥 Primary instance ${instanceId} for ${componentKey} cleaning up - clearing all state`);
         
         // Clear any pending connection timeout
@@ -472,7 +493,7 @@ const RoomPage = () => {
         socket.off('new-chat-message', handleNewChatMessage);
         socket.off('error', handleError);
       } else {
-        console.log(`🔄 Secondary instance ${instanceId} for ${componentKey} cleaning up - keeping primary instance active`);
+        console.log(`🔄 Secondary/blocked instance ${instanceId} for ${componentKey} cleaning up - no state to clear`);
         // Still clear window protection for blocked instances
         window.roomPageManager.unregisterRoom(componentKey);
       }
@@ -597,6 +618,6 @@ const RoomPage = () => {
       </div>
     </div>
   );
-};
+});
 
 export default RoomPage;
