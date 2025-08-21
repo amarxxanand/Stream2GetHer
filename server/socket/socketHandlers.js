@@ -5,15 +5,33 @@ const activeRooms = new Map();
 const syncIntervals = new Map();
 
 export const handleSocketConnection = (socket, io) => {
+  console.log(`🔌 Socket connected: ${socket.id} from ${socket.handshake.address}`);
+  
+  // Add connection timestamp to track rapid reconnections
+  socket.connectionTime = Date.now();
+  
   // Handle room joining
   socket.on('join-room', async (data) => {
     try {
       const { roomId, username } = data;
       
+      // Prevent rapid rejoining - if socket was just created, wait a moment
+      const timeSinceConnection = Date.now() - socket.connectionTime;
+      if (timeSinceConnection < 1000) {
+        console.log(`⚠️ Socket ${socket.id} trying to join too quickly after connection, delaying...`);
+        await new Promise(resolve => setTimeout(resolve, 1000 - timeSinceConnection));
+      }
+      
       // Find the room in database
       const room = await Room.findOne({ roomId });
       if (!room) {
         socket.emit('error', { message: 'Room not found' });
+        return;
+      }
+      
+      // Check if this socket is already in the room (prevent double joins)
+      if (socket.roomId === roomId) {
+        console.log(`⚠️ Socket ${socket.id} already in room ${roomId}, ignoring duplicate join`);
         return;
       }
       
@@ -31,6 +49,12 @@ export const handleSocketConnection = (socket, io) => {
       }
       
       const activeRoom = activeRooms.get(roomId);
+      
+      // Check if user already exists (in case of reconnection)
+      if (activeRoom.users.has(socket.id)) {
+        console.log(`⚠️ User ${socket.username} already exists in room ${roomId}, updating...`);
+      }
+      
       activeRoom.users.set(socket.id, {
         username: socket.username,
         isHost: false
@@ -70,7 +94,7 @@ export const handleSocketConnection = (socket, io) => {
       const userList = Array.from(activeRoom.users.values());
       io.to(roomId).emit('user-list-updated', userList);
       
-      console.log(`${socket.username} joined room ${roomId}`);
+      console.log(`✅ ${socket.username} joined room ${roomId} (${activeRoom.users.size} users total)`);
       
     } catch (error) {
       console.error('Error joining room:', error);
@@ -211,12 +235,20 @@ export const handleSocketConnection = (socket, io) => {
   });
   
   // Handle disconnection
-  socket.on('disconnect', async () => {
-    console.log(`User disconnected: ${socket.id}`);
+  socket.on('disconnect', async (reason) => {
+    const disconnectTime = Date.now();
+    const connectionDuration = disconnectTime - socket.connectionTime;
+    
+    console.log(`🔌 Socket disconnected: ${socket.id}, reason: ${reason}, duration: ${connectionDuration}ms`);
+    
+    // If connection was very short (less than 5 seconds), it might be a connection issue
+    if (connectionDuration < 5000) {
+      console.log(`⚠️ Very short connection duration for ${socket.id}, might be a connection issue`);
+    }
     
     if (socket.roomId) {
       const activeRoom = activeRooms.get(socket.roomId);
-      if (activeRoom) {
+      if (activeRoom && activeRoom.users.has(socket.id)) {
         activeRoom.users.delete(socket.id);
         
         // If this was the host, assign new host
@@ -240,7 +272,7 @@ export const handleSocketConnection = (socket, io) => {
             
             // Notify new host
             io.to(newHostSocketId).emit('host-assigned', { isHost: true });
-            console.log(`New host assigned: ${newHostSocketId}`);
+            console.log(`👑 New host assigned: ${newHostSocketId}`);
           } else {
             // No users left, clean up room
             activeRooms.delete(socket.roomId);
@@ -248,6 +280,7 @@ export const handleSocketConnection = (socket, io) => {
               clearInterval(syncIntervals.get(socket.roomId));
               syncIntervals.delete(socket.roomId);
             }
+            console.log(`🧹 Room ${socket.roomId} cleaned up - no users remaining`);
           }
         }
         
@@ -262,6 +295,8 @@ export const handleSocketConnection = (socket, io) => {
           const userList = Array.from(activeRoom.users.values());
           io.to(socket.roomId).emit('user-list-updated', userList);
         }
+        
+        console.log(`📤 ${socket.username || socket.id} left room ${socket.roomId} (${activeRoom.users.size} users remaining)`);
       }
     }
   });

@@ -77,13 +77,36 @@ const RoomPage = () => {
   useEffect(() => {
     if (!socket) return;
 
+    // Track connection attempts to prevent rapid reconnections
+    let isJoining = false;
+    let joinTimeout = null;
+
     const handleConnect = () => {
       setIsConnected(true);
-      socket.emit('join-room', { roomId, username });
+      
+      // Debounce join attempts to prevent rapid joining
+      if (isJoining) {
+        console.log('🔄 Already joining room, skipping duplicate join attempt');
+        return;
+      }
+      
+      isJoining = true;
+      
+      // Add a small delay to ensure connection is stable
+      joinTimeout = setTimeout(() => {
+        console.log(`🚪 Joining room: ${roomId} as ${username}`);
+        socket.emit('join-room', { roomId, username });
+        isJoining = false;
+      }, 500);
     };
 
     const handleDisconnect = () => {
       setIsConnected(false);
+      isJoining = false;
+      if (joinTimeout) {
+        clearTimeout(joinTimeout);
+        joinTimeout = null;
+      }
     };
 
     const handleSyncState = (data) => {
@@ -229,6 +252,11 @@ const RoomPage = () => {
     socket.connect();
 
     return () => {
+      // Clear any pending join timeout
+      if (joinTimeout) {
+        clearTimeout(joinTimeout);
+      }
+      
       socket.off('connect', handleConnect);
       socket.off('disconnect', handleDisconnect);
       socket.off('sync-state', handleSyncState);
