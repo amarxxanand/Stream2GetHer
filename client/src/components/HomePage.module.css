@@ -17,7 +17,7 @@
   -webkit-backdrop-filter: var(--blur-primary);
   color: var(--text-primary);
   border-radius: 24px;
-  padding: 48px;
+  padding: 24px;
   box-shadow: var(--shadow-primary);
   border: 1px solid var(--border-primary);
   position: relative;
@@ -28,27 +28,61 @@
 /* Two-column layout for wide displays */
 @media (min-width: 1200px) {
   .home-content {
-    max-width: 1000px;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 48px;
-    align-items: start;
+    max-width: 1200px;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    padding: 32px;
   }
   
   .hero-section {
-    grid-column: 1 / -1; /* Span across both columns */
+    width: 100%;
+    margin: -32px -32px 0 -32px;
+    padding: 32px;
+  }
+  
+  .content-wrapper {
+    display: flex;
+    gap: 48px;
+    align-items: stretch;
   }
   
   .form-container {
-    grid-column: 1;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    min-height: 600px;
   }
   
   .features-section {
-    grid-column: 2;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
     margin-top: 0;
-    height: fit-content;
-    position: sticky;
-    top: 0;
+    min-height: 600px;
+  }
+  
+  .features-inner-box {
+    background: rgba(249, 250, 251, 0.08);
+    border: 1px solid var(--border-primary);
+    border-radius: 16px;
+    padding: 8px;
+    backdrop-filter: var(--blur-secondary);
+    -webkit-backdrop-filter: var(--blur-secondary);
+    box-shadow: var(--shadow-primary);
+    height: 400px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    max-width: 540px;
   }
 }
 
@@ -68,7 +102,7 @@
   margin-bottom: 40px;
   background: #000000;
   color: #ffffff;
-  padding: 32px;
+  padding: 24px;
   border-radius: 16px;
   margin: -20px -20px 40px -20px;
   border: 1px solid var(--border-primary);
@@ -296,16 +330,14 @@
 }
 
 .features-section {
-  background: rgba(249, 250, 251, 0.05);
-  border: 1px solid var(--border-primary);
+  background: transparent;
+  border: none;
   border-radius: 12px;
-  padding: 24px;
+  padding: 0;
   margin-top: 20px;
-  backdrop-filter: var(--blur-secondary);
-  -webkit-backdrop-filter: var(--blur-secondary);
 }
 
-.features-section h3 {
+.features-inner-box h3 {
   font-size: 1.2rem;
   font-weight: 600;
   color: var(--text-primary);
@@ -315,18 +347,18 @@
   gap: 8px;
 }
 
-.features-section h3::before {
+.features-inner-box h3::before {
   content: '✨';
   font-size: 1.1rem;
 }
 
-.features-section ul {
+.features-inner-box ul {
   list-style: none;
   padding: 0;
   margin: 0;
 }
 
-.features-section li {
+.features-inner-box li {
   padding: 8px 0;
   color: var(--text-secondary);
   font-size: 0.95rem;
@@ -335,7 +367,7 @@
   line-height: 1.4;
 }
 
-.features-section li::before {
+.features-inner-box li::before {
   content: '✓';
   position: absolute;
   left: 0;
