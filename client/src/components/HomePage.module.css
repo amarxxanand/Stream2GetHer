@@ -25,6 +25,33 @@
   animation: slideUp 0.8s ease-out;
 }
 
+/* Two-column layout for wide displays */
+@media (min-width: 1200px) {
+  .home-content {
+    max-width: 1000px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 48px;
+    align-items: start;
+  }
+  
+  .hero-section {
+    grid-column: 1 / -1; /* Span across both columns */
+  }
+  
+  .form-container {
+    grid-column: 1;
+  }
+  
+  .features-section {
+    grid-column: 2;
+    margin-top: 0;
+    height: fit-content;
+    position: sticky;
+    top: 0;
+  }
+}
+
 @keyframes slideUp {
   from {
     opacity: 0;
@@ -269,17 +296,28 @@
 }
 
 .features-section {
-  background: #f9fafb;
+  background: rgba(249, 250, 251, 0.05);
+  border: 1px solid var(--border-primary);
   border-radius: 12px;
-  padding: 20px;
+  padding: 24px;
   margin-top: 20px;
+  backdrop-filter: var(--blur-secondary);
+  -webkit-backdrop-filter: var(--blur-secondary);
 }
 
 .features-section h3 {
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   font-weight: 600;
-  color: #374151;
-  margin-bottom: 12px;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.features-section h3::before {
+  content: '✨';
+  font-size: 1.1rem;
 }
 
 .features-section ul {
@@ -289,11 +327,12 @@
 }
 
 .features-section li {
-  padding: 4px 0;
-  color: #6b7280;
+  padding: 8px 0;
+  color: var(--text-secondary);
   font-size: 0.95rem;
   position: relative;
-  padding-left: 20px;
+  padding-left: 24px;
+  line-height: 1.4;
 }
 
 .features-section li::before {
@@ -302,6 +341,7 @@
   left: 0;
   color: #10b981;
   font-weight: bold;
+  font-size: 1rem;
 }
 
 @media (max-width: 600px) {
