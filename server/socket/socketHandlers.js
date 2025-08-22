@@ -163,8 +163,9 @@ export const handleSocketConnection = (socket, io) => {
         isHost: shouldBeHost
       });
 
-      // Send host assignment
+      // Send host assignment FIRST and immediately
       if (shouldBeHost) {
+        console.log(`👑 Assigning ${socket.username} as host for room ${roomId}`);
         socket.emit('host-assigned', { isHost: true });
         
         // Start sync interval for this room if not already started
@@ -173,10 +174,11 @@ export const handleSocketConnection = (socket, io) => {
         }
       } else {
         // Explicitly send non-host assignment
+        console.log(`👤 Assigning ${socket.username} as regular user for room ${roomId}`);
         socket.emit('host-assigned', { isHost: false });
       }
       
-      // Send current state to the new user
+      // Send current state to the new user AFTER host assignment
       const syncState = {
         videoUrl: room.currentVideoUrl,
         videoTitle: room.currentVideoTitle,
@@ -186,7 +188,11 @@ export const handleSocketConnection = (socket, io) => {
       };
 
       console.log(`📤 Sending sync state to ${socket.username} (isHost: ${shouldBeHost}):`, syncState);
-      socket.emit('sync-state', syncState);
+      
+      // Add a small delay to ensure host-assigned is processed first
+      setTimeout(() => {
+        socket.emit('sync-state', syncState);
+      }, 100);
       
       // If there's an active video, notify all users about the current state
       if (room.currentVideoUrl) {

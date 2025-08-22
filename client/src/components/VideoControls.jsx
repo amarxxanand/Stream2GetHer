@@ -3,6 +3,8 @@ import { Play, Pause, SkipBack, SkipForward, Search, Upload } from 'lucide-react
 import styles from './VideoControls.module.css';
 
 const VideoControls = ({ onLoadVideo, currentVideoUrl, currentVideoTitle, isPlayerReady, isHost = true }) => {
+  console.log(`🎮 VideoControls rendered with isHost: ${isHost}`);
+  
   const [videoUrl, setVideoUrl] = useState('');
   const [videoTitle, setVideoTitle] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -41,7 +43,10 @@ const VideoControls = ({ onLoadVideo, currentVideoUrl, currentVideoTitle, isPlay
   };
 
   const handleLoadVideo = async () => {
+    console.log(`🎮 handleLoadVideo called, isHost: ${isHost}`);
+    
     if (!isHost) {
+      console.log(`🚫 Load video blocked - not host`);
       alert('Only the room host can load videos');
       return;
     }
