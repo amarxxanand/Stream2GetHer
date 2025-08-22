@@ -130,10 +130,7 @@
 .app-title {
   font-size: 2.8rem;
   font-weight: 800;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #667eea;
   margin: 0;
   text-shadow: 0 0 30px rgba(102, 126, 234, 0.2);
   animation: glow 3s ease-in-out infinite alternate;
@@ -154,39 +151,101 @@
 
 .form-container {
   margin-bottom: 32px;
+  background: rgba(15, 23, 42, 0.9);
+  border: 2px solid rgba(148, 163, 184, 0.3);
+  border-radius: 24px;
+  padding: 32px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.15),
+    0 4px 16px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.form-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(102, 126, 234, 0.5);
+}
+
+.form-container::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: rgba(102, 126, 234, 0.03) ;
+  pointer-events: none;
 }
 
 .username-section {
   margin-bottom: 32px;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  border-radius: 20px;
+  padding: 24px;
+  position: relative;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 
+    0 4px 20px rgba(34, 197, 94, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.username-section:hover {
+  border-color: rgba(34, 197, 94, 0.5);
+  box-shadow: 
+    0 6px 30px rgba(34, 197, 94, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transform: translateY(-1px);
 }
 
 .username-section label {
   display: block;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 12px;
-  font-size: 1rem;
+  font-weight: 700;
+  color: #22c55e;
+  margin-bottom: 16px;
+  font-size: 1.1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  position: relative;
 }
 
 .username-section input {
   width: 100%;
-  padding: 16px 20px;
-  background: var(--bg-glass);
-  border: 1px solid var(--border-primary);
-  border-radius: 12px;
-  font-size: 1rem;
+  padding: 18px 24px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(34, 197, 94, 0.2);
+  border-radius: 16px;
+  font-size: 1.1rem;
   color: var(--text-primary);
   transition: all 0.3s ease;
   box-sizing: border-box;
-  backdrop-filter: var(--blur-secondary);
-  -webkit-backdrop-filter: var(--blur-secondary);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  /* box-shadow: 
+    0 2px 10px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2); */
 }
 
 .username-section input:focus {
   outline: none;
-  border-color: var(--border-accent);
-  box-shadow: var(--shadow-glow);
-  transform: translateY(-1px);
+  border-color: #22c55e;
+  background: rgba(255, 255, 255, 0.15);
+  /* box-shadow: 
+    0 0 0 4px rgba(34, 197, 94, 0.2),
+    0 4px 20px rgba(34, 197, 94, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2); */
+  transform: translateY(-2px);
 }
 
 .username-section input::placeholder {
@@ -196,11 +255,70 @@
 .actions-section {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 28px;
+  width: 100%;
+  background: rgba(15, 23, 42, 0.7);
+  border: 2px solid rgba(102, 126, 234, 0.3);
+  border-radius: 24px;
+  padding: 32px;
+  position: relative;
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  box-shadow: 
+    0 6px 30px rgba(102, 126, 234, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.actions-section:hover {
+  border-color: rgba(102, 126, 234, 0.5);
+  box-shadow: 
+    0 8px 40px rgba(102, 126, 234, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transform: translateY(-1px);
+}
+
+.actions-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: rgba(102, 126, 234, 0.6);
+  border-radius: 24px 24px 0 0;
 }
 
 .action-group {
   text-align: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 18px;
+  padding: 24px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.action-group:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.action-group::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.3);
 }
 
 .action-group h3 {
@@ -223,24 +341,31 @@
 
 .action-group input {
   width: 100%;
-  padding: 16px 20px;
-  background: var(--bg-glass);
-  border: 1px solid var(--border-primary);
-  border-radius: 12px;
-  font-size: 1rem;
+  padding: 18px 24px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(102, 126, 234, 0.3);
+  border-radius: 16px;
+  font-size: 1.1rem;
   color: var(--text-primary);
-  margin-bottom: 16px;
+  margin-bottom: 20px;
   transition: all 0.3s ease;
   box-sizing: border-box;
-  backdrop-filter: var(--blur-secondary);
-  -webkit-backdrop-filter: var(--blur-secondary);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 
+    0 2px 10px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 .action-group input:focus {
   outline: none;
-  border-color: var(--border-accent);
-  box-shadow: var(--shadow-glow);
-  transform: translateY(-1px);
+  border-color: #667eea;
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: 
+    0 0 0 4px rgba(102, 126, 234, 0.2),
+    0 4px 20px rgba(102, 126, 234, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
 }
 
 .action-group input::placeholder {
@@ -249,24 +374,45 @@
 
 .primary-button {
   width: 100%;
-  padding: 16px 28px;
-  background: var(--bg-button);
-  color: var(--text-primary);
-  border: none;
-  border-radius: 12px;
-  font-size: 1.1rem;
-  font-weight: 600;
+  padding: 18px 32px;
+  background: rgba(102, 126, 234, 0.9);
+  color: #ffffff;
+  border: 2px solid rgba(102, 126, 234, 1);
+  border-radius: 16px;
+  font-size: 1.2rem;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: var(--shadow-secondary);
+  box-shadow: 
+    0 4px 20px rgba(102, 126, 234, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
   position: relative;
   overflow: hidden;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.primary-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.2);
+  transition: left 0.5s ease;
+}
+
+.primary-button:hover::before {
+  left: 100%;
 }
 
 .primary-button:hover:not(:disabled) {
-  background: var(--bg-button-hover);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-primary);
+  background: rgba(90, 111, 216, 0.9);
+  transform: translateY(-3px);
+  box-shadow: 
+    0 6px 30px rgba(102, 126, 234, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 .primary-button:active {
@@ -281,21 +427,52 @@
 
 .secondary-button {
   width: 100%;
-  padding: 16px 28px;
-  background: transparent;
-  color: var(--text-accent);
-  border: 2px solid var(--border-accent);
-  border-radius: 12px;
-  font-size: 1.1rem;
-  font-weight: 600;
+  padding: 18px 32px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #667eea;
+  border: 2px solid #667eea;
+  border-radius: 16px;
+  font-size: 1.2rem;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.3s ease;
-  backdrop-filter: var(--blur-secondary);
-  -webkit-backdrop-filter: var(--blur-secondary);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 
+    0 4px 20px rgba(102, 126, 234, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  position: relative;
+  overflow: hidden;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.secondary-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: rgba(102, 126, 234, 0.1);
+  transition: left 0.5s ease;
+}
+
+.secondary-button:hover::before {
+  left: 100%;
 }
 
 .secondary-button:hover:not(:disabled) {
-  background: var(--bg-glass);
+  background: rgba(102, 126, 234, 0.1);
+  color: #ffffff;
+  border-color: #5a6fd8;
+  transform: translateY(-3px);
+  box-shadow: 
+    0 6px 30px rgba(102, 126, 234, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.secondary-button:disabled {
   color: var(--text-primary);
   transform: translateY(-2px);
   box-shadow: var(--shadow-glow);
