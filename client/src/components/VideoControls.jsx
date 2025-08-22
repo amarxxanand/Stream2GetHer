@@ -242,34 +242,24 @@ const VideoControls = ({ onLoadVideo, currentVideoUrl, currentVideoTitle, isPlay
       )}
 
       <div className={styles.instructions}>
-        <h4>📋 Instructions:</h4>
+        <h4>📋 How to Play Videos:</h4>
         <ul>
-          <li><strong>Google Drive Setup Required:</strong> Configure Google Drive API credentials in server/.env</li>
-          <li>Share a Google Drive video file with "Anyone with the link" access</li>
-          <li>Paste the share link or file ID in the input above</li>
+          <li>Paste a video URL in the input above (YouTube, Google Drive, or direct video links)</li>
           <li>Use the video player controls to play, pause, and seek</li>
           <li>All participants will automatically sync with your actions</li>
           <li>Supported formats: MP4, WebM, AVI, MOV, and other common video formats</li>
         </ul>
-        <p><em>💡 For testing without Google Drive API: Use direct video URLs (.mp4 links) from other hosting services</em></p>
       </div>
 
       <div className={styles.googleDriveHelp}>
-        <h4>🔧 Google Drive API Setup:</h4>
-        <ol>
-          <li>Go to <a href="https://console.cloud.google.com" target="_blank" rel="noopener noreferrer">Google Cloud Console</a></li>
-          <li>Create a project and enable Google Drive API</li>
-          <li>Create service account credentials (JSON key file)</li>
-          <li>Add GOOGLE_SERVICE_ACCOUNT_KEY to server/.env file</li>
-          <li>Restart the server</li>
-        </ol>
-        <p><strong>How to share a Google Drive video (after API setup):</strong></p>
+        <h4>🎬 How to Share Google Drive Videos:</h4>
         <ol>
           <li>Upload your video file to Google Drive</li>
           <li>Right-click the file and select "Share"</li>
           <li>Change access to "Anyone with the link"</li>
           <li>Copy the share link and paste it above</li>
         </ol>
+        <p><em>💡 Alternative: You can also use YouTube URLs or direct video file links (.mp4, .webm, etc.)</em></p>
       </div>
     </div>
   );

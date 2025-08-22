@@ -233,7 +233,7 @@ app.get('/api/video/stream', async (req, res) => {
     if (!googleDriveService.isServiceConfigured()) {
       return res.status(503).json({ 
         error: 'Google Drive service not configured',
-        message: 'Please set up Google Drive API credentials to use video streaming. Check MIGRATION-GUIDE.md for setup instructions.'
+        message: 'To use Google Drive videos, make sure your video is shared properly: Upload to Google Drive → Right-click → Share → Anyone with the link → Copy link.'
       });
     }
 
@@ -380,7 +380,7 @@ app.get('/api/video/stream', async (req, res) => {
     if (error.message.includes('not configured')) {
       return res.status(503).json({ 
         error: 'Google Drive service not configured',
-        message: 'Please set up Google Drive API credentials to use video streaming.'
+        message: 'To use Google Drive videos, make sure your video is shared properly: Upload to Google Drive → Right-click → Share → Anyone with the link → Copy link.'
       });
     }
     
@@ -407,7 +407,7 @@ app.get('/api/video/transcode', async (req, res) => {
     if (!googleDriveService.isServiceConfigured()) {
       return res.status(503).json({ 
         error: 'Google Drive service not configured',
-        message: 'Please set up Google Drive API credentials to use video streaming. Check MIGRATION-GUIDE.md for setup instructions.'
+        message: 'To use Google Drive videos, make sure your video is shared properly: Upload to Google Drive → Right-click → Share → Anyone with the link → Copy link.'
       });
     }
 
@@ -533,7 +533,7 @@ app.get('/api/video/transcode', async (req, res) => {
       if (error.message.includes('not configured')) {
         return res.status(503).json({ 
           error: 'Google Drive service not configured',
-          message: 'Please set up Google Drive API credentials to use video streaming.'
+          message: 'To use Google Drive videos, make sure your video is shared properly: Upload to Google Drive → Right-click → Share → Anyone with the link → Copy link.'
         });
       }
       
@@ -566,7 +566,7 @@ app.get('/api/video/info', async (req, res) => {
     if (!googleDriveService.isServiceConfigured()) {
       return res.status(503).json({ 
         error: 'Google Drive API not configured',
-        message: 'To play Google Drive videos, you need to set up Google Drive API credentials.'
+        message: 'To use Google Drive videos, make sure your video is shared properly: Upload to Google Drive → Right-click → Share → Anyone with the link → Copy link.'
       });
     }
 
@@ -624,14 +624,13 @@ app.get('/api/video/metadata', async (req, res) => {
       
       return res.status(503).json({ 
         error: 'Google Drive API not configured',
-        message: 'To play Google Drive videos, you need to set up Google Drive API credentials. The direct download URLs from Google Drive don\'t work with HTML5 video players due to authentication and redirect requirements.',
+        message: 'To play Google Drive videos, share your video properly on Google Drive.',
         fileId: fileId || 'unknown',
-        setup: {
-          step1: 'Go to Google Cloud Console (console.cloud.google.com)',
-          step2: 'Create a project and enable Google Drive API',
-          step3: 'Create service account credentials',
-          step4: 'Add credentials to your .env file',
-          step5: 'See MIGRATION-GUIDE.md for detailed instructions'
+        howToShare: {
+          step1: 'Upload your video file to Google Drive',
+          step2: 'Right-click the file and select "Share"', 
+          step3: 'Change access to "Anyone with the link"',
+          step4: 'Copy the share link and paste it in the video URL field'
         },
         alternatives: 'You can also use direct video URLs from other platforms (like direct MP4 links from file hosting services) for testing.'
       });
@@ -658,7 +657,7 @@ app.get('/api/video/metadata', async (req, res) => {
     if (error.message.includes('not configured')) {
       return res.status(503).json({ 
         error: 'Google Drive service not configured',
-        message: 'Please set up Google Drive API credentials to use video streaming.'
+        message: 'To use Google Drive videos, make sure your video is shared properly: Upload to Google Drive → Right-click → Share → Anyone with the link → Copy link.'
       });
     }
     
