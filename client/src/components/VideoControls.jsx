@@ -8,15 +8,6 @@ const VideoControls = ({ onLoadVideo, currentVideoUrl, currentVideoTitle, isPlay
   const [isLoading, setIsLoading] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
 
-  // Debug logging for component state
-  console.log('🎛️ VideoControls State:', {
-    isHost,
-    isDisabled,
-    isPlayerReady,
-    hasCurrentVideo: !!currentVideoUrl,
-    inputValue: videoUrl
-  });
-
   const extractFileId = (url) => {
     const patterns = [
       /\/file\/d\/([a-zA-Z0-9-_]+)/, // Standard share URL
@@ -126,12 +117,10 @@ const VideoControls = ({ onLoadVideo, currentVideoUrl, currentVideoTitle, isPlay
 
   const handleInputChange = (e) => {
     const newValue = e.target.value;
-    console.log('📝 Input change:', newValue);
     setVideoUrl(newValue);
   };
 
   const handleInputFocus = (e) => {
-    console.log('🎯 Input focused');
     if (isDisabled) {
       alert('Only the room host can load videos');
       e.target.blur();
@@ -155,13 +144,9 @@ const VideoControls = ({ onLoadVideo, currentVideoUrl, currentVideoTitle, isPlay
       </div>
       
       <div className={styles.loadVideoSection}>
-        <label htmlFor="video-url">Load Video URL</label>
-        
-        {/* Debug info */}
-        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
-          Status: {isHost ? '✅ You are the host' : '⏸️ Only host can load videos'} | 
-          Input: {isDisabled ? '🔒 Disabled' : '✏️ Enabled'}
-        </div>
+        <label htmlFor="video-url">
+          {isHost ? '🎬 Load Video URL' : '🔒 Video Controls (Host Only)'}
+        </label>
         
         <div className={styles.inputGroup}>
           <input

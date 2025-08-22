@@ -19,6 +19,10 @@ const roomSchema = new mongoose.Schema({
     type: String,
     default: null
   },
+  hostUsername: {
+    type: String,
+    default: null
+  },
   participants: [{
     type: String, // Socket IDs of connected users
   }],

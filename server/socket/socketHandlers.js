@@ -71,15 +71,22 @@ export const handleSocketConnection = (socket, io) => {
       
       // Find the room in database (fallback to in-memory if DB unavailable)
       let room;
+      let isRoomCreator = false;
+      
       try {
         room = await Room.findOne({ roomId });
         if (!room) {
-          // Create room in database if not exists
+          // Create room in database if not exists - this user is the creator/host
           room = await Room.create({
             roomId,
             hostUserId: socket.id,
+            hostUsername: username || `User-${socket.id.substring(0, 6)}`,
             createdAt: new Date()
           });
+          isRoomCreator = true;
+          console.log(`👑 ${username} created room ${roomId} and became host`);
+        } else {
+          console.log(`🚪 ${username} joining existing room ${roomId} (host: ${room.hostUsername})`);
         }
       } catch (error) {
         console.log('⚠️ MongoDB not available, using in-memory room management');
@@ -107,47 +114,61 @@ export const handleSocketConnection = (socket, io) => {
       if (!activeRooms.has(roomId)) {
         activeRooms.set(roomId, {
           hostSocketId: null,
+          hostUsername: null,
           users: new Map()
         });
       }
-      
+
       const activeRoom = activeRooms.get(roomId);
+      
+      // Determine if this user should be host
+      let shouldBeHost = false;
+      
+      if (isRoomCreator) {
+        // This user created the room, they should be host
+        shouldBeHost = true;
+        activeRoom.hostSocketId = socket.id;
+        activeRoom.hostUsername = socket.username;
+      } else if (!activeRoom.hostSocketId) {
+        // Fallback: if no host exists in memory, first user becomes host
+        shouldBeHost = true;
+        activeRoom.hostSocketId = socket.id;
+        activeRoom.hostUsername = socket.username;
+        console.log(`👑 ${socket.username} became host (no existing host found)`);
+      } else {
+        // Room has an existing host, this user joins as regular user
+        shouldBeHost = false;
+        console.log(`👤 ${socket.username} joined as regular user (host is ${activeRoom.hostUsername})`);
+      }
       
       // Check if user already exists (in case of reconnection)
       if (activeRoom.users.has(socket.id)) {
         console.log(`⚠️ User ${socket.username} already exists in room ${roomId}, updating...`);
       }
-      
+
       activeRoom.users.set(socket.id, {
         username: socket.username,
-        isHost: false
+        isHost: shouldBeHost
       });
-      
-      // Assign host if no host exists
-      if (!activeRoom.hostSocketId || !activeRoom.users.has(activeRoom.hostSocketId)) {
-        activeRoom.hostSocketId = socket.id;
-        activeRoom.users.get(socket.id).isHost = true;
-        room.hostSocketId = socket.id;
-        await room.save();
-        
+
+      // Send host assignment
+      if (shouldBeHost) {
         socket.emit('host-assigned', { isHost: true });
         
         // Start sync interval for this room if not already started
         if (!syncIntervals.has(roomId)) {
           startSyncInterval(roomId, io);
         }
-      }
-      
-      // Send current state to the new user
+      }      // Send current state to the new user
       const syncState = {
         videoUrl: room.currentVideoUrl,
         videoTitle: room.currentVideoTitle,
         time: room.lastKnownTime,
         isPlaying: room.lastKnownState,
-        isHost: activeRoom.hostSocketId === socket.id
+        isHost: shouldBeHost
       };
-      
-      console.log(`📤 Sending sync state to ${socket.username}:`, syncState);
+
+      console.log(`📤 Sending sync state to ${socket.username} (isHost: ${shouldBeHost}):`, syncState);
       socket.emit('sync-state', syncState);
       
       // If there's an active video, notify all users about the current state
