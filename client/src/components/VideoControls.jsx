@@ -8,6 +8,15 @@ const VideoControls = ({ onLoadVideo, currentVideoUrl, currentVideoTitle, isPlay
   const [isLoading, setIsLoading] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
 
+  // Debug logging for component state
+  console.log('🎛️ VideoControls State:', {
+    isHost,
+    isDisabled,
+    isPlayerReady,
+    hasCurrentVideo: !!currentVideoUrl,
+    inputValue: videoUrl
+  });
+
   const extractFileId = (url) => {
     const patterns = [
       /\/file\/d\/([a-zA-Z0-9-_]+)/, // Standard share URL
@@ -115,6 +124,20 @@ const VideoControls = ({ onLoadVideo, currentVideoUrl, currentVideoTitle, isPlay
     }
   };
 
+  const handleInputChange = (e) => {
+    const newValue = e.target.value;
+    console.log('📝 Input change:', newValue);
+    setVideoUrl(newValue);
+  };
+
+  const handleInputFocus = (e) => {
+    console.log('🎯 Input focused');
+    if (isDisabled) {
+      alert('Only the room host can load videos');
+      e.target.blur();
+    }
+  };
+
   const generateShareableLink = (url) => {
     const fileId = extractFileId(url);
     if (fileId) {
@@ -133,16 +156,29 @@ const VideoControls = ({ onLoadVideo, currentVideoUrl, currentVideoTitle, isPlay
       
       <div className={styles.loadVideoSection}>
         <label htmlFor="video-url">Load Video URL</label>
+        
+        {/* Debug info */}
+        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+          Status: {isHost ? '✅ You are the host' : '⏸️ Only host can load videos'} | 
+          Input: {isDisabled ? '🔒 Disabled' : '✏️ Enabled'}
+        </div>
+        
         <div className={styles.inputGroup}>
           <input
             id="video-url"
             type="text"
             placeholder={isHost ? "Paste Google Drive video URL, YouTube URL, or direct video file URL" : "Only host can load videos"}
             value={videoUrl}
-            onChange={(e) => setVideoUrl(e.target.value)}
+            onChange={handleInputChange}
+            onFocus={handleInputFocus}
             onKeyPress={handleKeyPress}
             disabled={isDisabled}
-            style={{ opacity: isDisabled ? 0.6 : 1 }}
+            style={{ 
+              opacity: isDisabled ? 0.6 : 1,
+              cursor: isDisabled ? 'not-allowed' : 'text'
+            }}
+            autoComplete="off"
+            spellCheck="false"
           />
           <input
             id="video-title"
