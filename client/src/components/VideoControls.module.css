@@ -46,6 +46,18 @@
 }
 
 .hostOnly {
+  background: var(--gradient-warning);
+  color: white;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: var(--shadow-glow);
+}
+
+.hostBadge {
   background: var(--gradient-success);
   color: white;
   padding: 6px 14px;

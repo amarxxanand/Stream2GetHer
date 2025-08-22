@@ -588,6 +588,18 @@ const RoomPage = React.memo(() => {
     return <div>Invalid room</div>;
   }
 
+  // Debug logging for UI state
+  console.log('🎬 RoomPage Render State:', {
+    roomId,
+    username,
+    isHost,
+    isConnected,
+    hasUsers: users.length > 0,
+    hasMessages: messages.length > 0,
+    currentVideoUrl,
+    currentVideoTitle
+  });
+
   return (
     <div className={styles.roomPage}>
       <header className={styles.roomHeader}>
@@ -627,18 +639,20 @@ const RoomPage = React.memo(() => {
             {!currentVideoUrl && (
               <div className={styles.noVideoPlaceholder}>
                 <p>No video loaded</p>
-                {isHost && <p>Load a Google Drive video to get started!</p>}
+                <p>Load a video URL to get started!</p>
               </div>
             )}
           </div>
-          {isHost && (
-            <VideoControls
-              onLoadVideo={handleLoadVideo}
-              currentVideoUrl={currentVideoUrl}
-              currentVideoTitle={currentVideoTitle}
-              isPlayerReady={isVideoReady}
-            />
-          )}
+          
+          {/* Always show video controls - disable if not host */}
+          <VideoControls
+            onLoadVideo={handleLoadVideo}
+            currentVideoUrl={currentVideoUrl}
+            currentVideoTitle={currentVideoTitle}
+            isPlayerReady={isVideoReady}
+            isHost={isHost}
+            isDisabled={!isHost}
+          />
         </div>
 
         <div className={styles.sidebar}>

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Play, Pause, SkipBack, SkipForward, Search, Upload } from 'lucide-react';
 import styles from './VideoControls.module.css';
 
-const VideoControls = ({ onLoadVideo, currentVideoUrl, currentVideoTitle, isPlayerReady }) => {
+const VideoControls = ({ onLoadVideo, currentVideoUrl, currentVideoTitle, isPlayerReady, isHost = true, isDisabled = false }) => {
   const [videoUrl, setVideoUrl] = useState('');
   const [videoTitle, setVideoTitle] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -41,6 +41,11 @@ const VideoControls = ({ onLoadVideo, currentVideoUrl, currentVideoTitle, isPlay
   };
 
   const handleLoadVideo = async () => {
+    if (isDisabled) {
+      alert('Only the room host can load videos');
+      return;
+    }
+    
     const trimmedUrl = videoUrl.trim();
     
     if (!trimmedUrl) {
@@ -122,31 +127,36 @@ const VideoControls = ({ onLoadVideo, currentVideoUrl, currentVideoTitle, isPlay
     <div className={styles.videoControls}>
       <div className={styles.controlsHeader}>
         <h3>Video Controls</h3>
-        <span className={styles.hostOnly}>Host Only</span>
+        {!isHost && <span className={styles.hostOnly}>Host Only</span>}
+        {isHost && <span className={styles.hostBadge}>You are Host</span>}
       </div>
       
       <div className={styles.loadVideoSection}>
-        <label htmlFor="video-url">Load Google Drive Video</label>
+        <label htmlFor="video-url">Load Video URL</label>
         <div className={styles.inputGroup}>
           <input
             id="video-url"
             type="text"
-            placeholder="Paste Google Drive video URL or file ID"
+            placeholder={isHost ? "Paste Google Drive video URL, YouTube URL, or direct video file URL" : "Only host can load videos"}
             value={videoUrl}
             onChange={(e) => setVideoUrl(e.target.value)}
             onKeyPress={handleKeyPress}
+            disabled={isDisabled}
+            style={{ opacity: isDisabled ? 0.6 : 1 }}
           />
           <input
             id="video-title"
             type="text"
-            placeholder="Video title (optional)"
+            placeholder={isHost ? "Video title (optional)" : "Host controls only"}
             value={videoTitle}
             onChange={(e) => setVideoTitle(e.target.value)}
             onKeyPress={handleKeyPress}
+            disabled={isDisabled}
+            style={{ opacity: isDisabled ? 0.6 : 1 }}
           />
           <button
             onClick={handleLoadVideo}
-            disabled={!videoUrl.trim() || isLoading}
+            disabled={!videoUrl.trim() || isLoading || isDisabled}
             className={styles.loadButton}
           >
             {isValidating ? (

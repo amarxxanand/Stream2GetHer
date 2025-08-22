@@ -61,11 +61,20 @@
   font-size: 1.6rem;
   font-weight: 700;
   margin: 0;
+  color: var(--text-primary); /* Fallback color */
   background: var(--gradient-primary);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
   text-shadow: var(--shadow-text);
+}
+
+/* Fallback for browsers that don't support background-clip */
+@supports not (background-clip: text) {
+  .roomInfo h1 {
+    color: var(--text-primary) !important;
+    -webkit-text-fill-color: var(--text-primary) !important;
+  }
 }
 
 .hostBadge {
