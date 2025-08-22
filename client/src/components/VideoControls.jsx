@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Play, Pause, SkipBack, SkipForward, Search, Upload } from 'lucide-react';
 import styles from './VideoControls.module.css';
 
-const VideoControls = ({ onLoadVideo, currentVideoUrl, currentVideoTitle, isPlayerReady, isHost = true, isDisabled = false }) => {
+const VideoControls = ({ onLoadVideo, currentVideoUrl, currentVideoTitle, isPlayerReady, isHost = true }) => {
   const [videoUrl, setVideoUrl] = useState('');
   const [videoTitle, setVideoTitle] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -41,7 +41,7 @@ const VideoControls = ({ onLoadVideo, currentVideoUrl, currentVideoTitle, isPlay
   };
 
   const handleLoadVideo = async () => {
-    if (isDisabled) {
+    if (!isHost) {
       alert('Only the room host can load videos');
       return;
     }
@@ -49,13 +49,7 @@ const VideoControls = ({ onLoadVideo, currentVideoUrl, currentVideoTitle, isPlay
     const trimmedUrl = videoUrl.trim();
     
     if (!trimmedUrl) {
-      alert('Please enter a Google Drive video URL');
-      return;
-    }
-
-    const fileId = extractFileId(trimmedUrl);
-    if (!fileId) {
-      alert('Please enter a valid Google Drive URL or file ID');
+      alert('Please enter a video URL');
       return;
     }
 
@@ -63,45 +57,75 @@ const VideoControls = ({ onLoadVideo, currentVideoUrl, currentVideoTitle, isPlay
     setIsValidating(true);
     
     try {
-      // Validate the video file
-      const metadata = await validateGoogleDriveUrl(trimmedUrl);
+      // Check if it's a Google Drive URL or direct video URL
+      const isGoogleDriveUrl = trimmedUrl.includes('drive.google.com') || extractFileId(trimmedUrl);
       
-      // Show warning for potentially problematic formats
-      if (metadata.mimeType && (metadata.mimeType.includes('matroska') || metadata.mimeType.includes('mkv'))) {
-        const proceed = confirm(`🎬 MKV Format Detected\n\nThis video is in MKV format, which has limited browser support:\n\n• ⚠️ Seeking (skipping to different parts) will often cause errors\n• 🔄 Video may restart from beginning when seeking\n• ⏸️ Pausing and playing works normally\n• 📱 Mobile devices may have more issues\n\nRecommendation: Convert to MP4 for best experience.\n\nContinue loading this MKV video?`);
-        if (!proceed) {
+      if (isGoogleDriveUrl) {
+        const fileId = extractFileId(trimmedUrl);
+        if (!fileId) {
+          alert('Please enter a valid Google Drive URL or file ID');
           return;
         }
-      }
-      
-      // Show warning if Google Drive API is not configured
-      if (metadata.warning) {
-        const proceed = confirm(`${metadata.warning}\n\nVideo may not play correctly. Continue anyway?`);
-        if (!proceed) {
-          return;
+        
+        // Validate the Google Drive video file
+        const metadata = await validateGoogleDriveUrl(trimmedUrl);
+        
+        // Show warning for potentially problematic formats
+        if (metadata.mimeType && (metadata.mimeType.includes('matroska') || metadata.mimeType.includes('mkv'))) {
+          const proceed = confirm(`🎬 MKV Format Detected\n\nThis video is in MKV format, which has limited browser support:\n\n• ⚠️ Seeking (skipping to different parts) will often cause errors\n• 🔄 Video may restart from beginning when seeking\n• ⏸️ Pausing and playing works normally\n• 📱 Mobile devices may have more issues\n\nRecommendation: Convert to MP4 for best experience.\n\nContinue loading this MKV video?`);
+          if (!proceed) {
+            return;
+          }
         }
+        
+        // Show warning if Google Drive API is not configured
+        if (metadata.warning) {
+          const proceed = confirm(`${metadata.warning}\n\nVideo may not play correctly. Continue anyway?`);
+          if (!proceed) {
+            return;
+          }
+        }
+        
+        // Use provided title or fallback to file name
+        const finalTitle = videoTitle.trim() || metadata.name || `Video ${fileId.substring(0, 8)}`;
+        onLoadVideo(trimmedUrl, finalTitle);
+      } else {
+        // Direct video URL - bypass Google Drive validation
+        console.log('🎬 Loading direct video URL:', trimmedUrl);
+        const finalTitle = videoTitle.trim() || 'Direct Video';
+        onLoadVideo(trimmedUrl, finalTitle);
       }
       
-      // Use provided title or fallback to file name
-      const finalTitle = videoTitle.trim() || metadata.name || `Video ${fileId.substring(0, 8)}`;
-      
-      onLoadVideo(trimmedUrl, finalTitle);
       setVideoUrl('');
       setVideoTitle('');
     } catch (error) {
       console.error('Error loading video:', error);
       
-      // Provide specific error messages for different scenarios
-      if (error.message.includes('Google Drive API not configured') || error.message.includes('service not configured')) {
-        alert(`❌ Google Drive API Setup Required\n\nTo play Google Drive videos, you need to:\n\n1. Set up Google Drive API credentials\n2. Add them to your .env file\n3. Restart the server\n\nAlternatively, you can use direct video URLs (like .mp4 files from other hosting services) for testing.\n\nSee the console or MIGRATION-GUIDE.md for detailed setup instructions.`);
-      } else if (error.message.includes('Invalid Google Drive URL')) {
-        alert(`❌ Invalid URL\n\nPlease make sure you're using a valid Google Drive share link or file ID.\n\nExpected formats:\n• https://drive.google.com/file/d/FILE_ID/view\n• https://drive.google.com/open?id=FILE_ID\n• Just the FILE_ID`);
-      } else if (error.message.includes('not accessible')) {
-        alert(`❌ Access Denied\n\nThe video file cannot be accessed. Please ensure:\n\n1. The file sharing is set to "Anyone with the link"\n2. The file exists and hasn't been deleted\n3. You have the correct permissions`);
-      } else if (error.message.includes('not a video')) {
-        alert(`❌ Invalid File Type\n\nThe file is not a supported video format.\n\nSupported formats: MP4, WebM, AVI, MOV, OGG`);
+      // Check if this was a Google Drive URL that failed
+      const isGoogleDriveUrl = trimmedUrl.includes('drive.google.com') || extractFileId(trimmedUrl);
+      
+      if (isGoogleDriveUrl) {
+        // Provide specific error messages for Google Drive URLs
+        if (error.message.includes('Google Drive API not configured') || error.message.includes('service not configured')) {
+          alert(`❌ Google Drive API Setup Required\n\nTo play Google Drive videos, you need to:\n\n1. Set up Google Drive API credentials\n2. Add them to your .env file\n3. Restart the server\n\nAlternatively, you can use direct video URLs (like .mp4 files from other hosting services) for testing.\n\nSee the console or MIGRATION-GUIDE.md for detailed setup instructions.`);
+        } else if (error.message.includes('Invalid Google Drive URL')) {
+          alert(`❌ Invalid URL\n\nPlease make sure you're using a valid Google Drive share link or file ID.\n\nExpected formats:\n• https://drive.google.com/file/d/FILE_ID/view\n• https://drive.google.com/open?id=FILE_ID\n• Just the FILE_ID`);
+        } else if (error.message.includes('not accessible')) {
+          alert(`❌ Access Denied\n\nThe video file cannot be accessed. Please ensure:\n\n1. The file sharing is set to "Anyone with the link"\n2. The file exists and hasn't been deleted\n3. You have the correct permissions`);
+        } else if (error.message.includes('not a video')) {
+          alert(`❌ Invalid File Type\n\nThe file is not a supported video format.\n\nSupported formats: MP4, WebM, AVI, MOV, OGG`);
+        } else {
+          alert(`Failed to load Google Drive video: ${error.message}`);
+        }
       } else {
-        alert(`Failed to load video: ${error.message}`);
+        // For direct URLs, try to load anyway with a warning
+        const proceed = confirm(`⚠️ Could not validate video URL\n\n"${trimmedUrl}"\n\nThis might be a direct video link that will work in the player, or it might not be a valid video URL.\n\nTry loading it anyway?`);
+        if (proceed) {
+          const finalTitle = videoTitle.trim() || 'Direct Video';
+          onLoadVideo(trimmedUrl, finalTitle);
+          setVideoUrl('');
+          setVideoTitle('');
+        }
       }
     } finally {
       setIsLoading(false);
@@ -121,7 +145,7 @@ const VideoControls = ({ onLoadVideo, currentVideoUrl, currentVideoTitle, isPlay
   };
 
   const handleInputFocus = (e) => {
-    if (isDisabled) {
+    if (!isHost) {
       alert('Only the room host can load videos');
       e.target.blur();
     }
@@ -157,10 +181,10 @@ const VideoControls = ({ onLoadVideo, currentVideoUrl, currentVideoTitle, isPlay
             onChange={handleInputChange}
             onFocus={handleInputFocus}
             onKeyPress={handleKeyPress}
-            disabled={isDisabled}
+            disabled={!isHost}
             style={{ 
-              opacity: isDisabled ? 0.6 : 1,
-              cursor: isDisabled ? 'not-allowed' : 'text'
+              opacity: !isHost ? 0.6 : 1,
+              cursor: !isHost ? 'not-allowed' : 'text'
             }}
             autoComplete="off"
             spellCheck="false"
@@ -172,12 +196,12 @@ const VideoControls = ({ onLoadVideo, currentVideoUrl, currentVideoTitle, isPlay
             value={videoTitle}
             onChange={(e) => setVideoTitle(e.target.value)}
             onKeyPress={handleKeyPress}
-            disabled={isDisabled}
-            style={{ opacity: isDisabled ? 0.6 : 1 }}
+            disabled={!isHost}
+            style={{ opacity: !isHost ? 0.6 : 1 }}
           />
           <button
             onClick={handleLoadVideo}
-            disabled={!videoUrl.trim() || isLoading || isDisabled}
+            disabled={!videoUrl.trim() || isLoading || !isHost}
             className={styles.loadButton}
           >
             {isValidating ? (
@@ -192,13 +216,28 @@ const VideoControls = ({ onLoadVideo, currentVideoUrl, currentVideoTitle, isPlay
 
       {currentVideoUrl && (
         <div className={styles.currentVideo}>
-          <p>Current Video: <strong>{currentVideoTitle || 'Untitled Video'}</strong></p>
+          <div className={styles.currentVideoHeader}>
+            <h4>📹 Currently Playing:</h4>
+            {isHost && (
+              <button 
+                onClick={() => onLoadVideo('', '')}
+                className={styles.clearButton}
+                title="Clear current video"
+              >
+                Clear Video
+              </button>
+            )}
+          </div>
+          <p><strong>{currentVideoTitle || 'Untitled Video'}</strong></p>
           <p className={styles.videoStatus}>
-            Player: {isPlayerReady ? 'Ready' : 'Loading...'}
+            Player: {isPlayerReady ? '✅ Ready' : '⏳ Loading...'}
           </p>
-          <p className={styles.videoUrl}>
-            <small>URL: {generateShareableLink(currentVideoUrl)}</small>
-          </p>
+          <details className={styles.videoDetails}>
+            <summary>Video URL</summary>
+            <p className={styles.videoUrl}>
+              <code>{generateShareableLink(currentVideoUrl)}</code>
+            </p>
+          </details>
         </div>
       )}
 

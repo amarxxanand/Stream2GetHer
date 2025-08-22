@@ -651,7 +651,6 @@ const RoomPage = React.memo(() => {
             currentVideoTitle={currentVideoTitle}
             isPlayerReady={isVideoReady}
             isHost={isHost}
-            isDisabled={!isHost}
           />
         </div>
 
