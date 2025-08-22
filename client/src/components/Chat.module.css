@@ -163,17 +163,17 @@
 }
 
 .ownMessage .messageContent {
-  background: var(--gradient-primary);
+  background: var(--chat-outgoing); /* Green for outgoing messages */
   color: white;
   border-bottom-right-radius: 6px;
-  box-shadow: var(--shadow-glow);
+  box-shadow: 0 0 15px rgba(76, 175, 80, 0.3);
 }
 
 .otherMessage .messageContent {
-  background: var(--bg-glass);
-  color: var(--text-primary);
+  background: var(--chat-incoming); /* Blue for incoming messages */
+  color: white;
   border-bottom-left-radius: 6px;
-  box-shadow: var(--shadow-primary);
+  box-shadow: 0 0 15px rgba(33, 150, 243, 0.3);
 }
 
 .chatInput {

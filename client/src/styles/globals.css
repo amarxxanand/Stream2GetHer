@@ -1,9 +1,9 @@
-/* Global Dark Theme with Gradients */
+/* Global Dark Theme with Black Background */
 :root {
-  /* Dark Theme Colors */
-  --bg-primary: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
-  --bg-secondary: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-  --bg-card: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
+  /* Dark Theme Colors - Updated to Black */
+  --bg-primary: #000000;
+  --bg-secondary: #111111;
+  --bg-card: rgba(255,255,255,0.05);
   --bg-glass: rgba(255, 255, 255, 0.08);
   --bg-button: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   --bg-button-hover: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
@@ -29,6 +29,10 @@
   /* Backdrop Blur */
   --blur-primary: blur(10px);
   --blur-secondary: blur(5px);
+  
+  /* Chat Message Colors */
+  --chat-incoming: linear-gradient(135deg, #2196F3 0%, #1976D2 100%); /* Blue for incoming */
+  --chat-outgoing: linear-gradient(135deg, #4CAF50 0%, #388E3C 100%); /* Green for outgoing */
 }
 
 * {

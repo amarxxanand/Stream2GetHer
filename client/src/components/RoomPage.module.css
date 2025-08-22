@@ -8,10 +8,8 @@
 }
 
 .roomHeader {
-  background: var(--bg-card);
-  backdrop-filter: var(--blur-primary);
-  -webkit-backdrop-filter: var(--blur-primary);
-  color: var(--text-primary);
+  background: #000000;
+  color: #ffffff;
   border-bottom: 1px solid var(--border-primary);
   padding: 20px 28px;
   display: flex;
@@ -34,21 +32,19 @@
   align-items: center;
   gap: 10px;
   padding: 10px 18px;
-  background: var(--bg-glass);
-  color: var(--text-primary);
-  border: 1px solid var(--border-primary);
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 10px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  backdrop-filter: var(--blur-secondary);
-  -webkit-backdrop-filter: var(--blur-secondary);
 }
 
 .homeButton:hover {
-  background: var(--bg-button);
+  background: rgba(255, 255, 255, 0.2);
   transform: translateY(-1px);
-  box-shadow: var(--shadow-glow);
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1);
 }
 
 .roomInfo {
@@ -61,24 +57,12 @@
   font-size: 1.6rem;
   font-weight: 700;
   margin: 0;
-  color: var(--text-primary); /* Fallback color */
-  background: var(--gradient-primary);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  text-shadow: var(--shadow-text);
-}
-
-/* Fallback for browsers that don't support background-clip */
-@supports not (background-clip: text) {
-  .roomInfo h1 {
-    color: var(--text-primary) !important;
-    -webkit-text-fill-color: var(--text-primary) !important;
-  }
+  color: #ffffff;
+  text-shadow: none;
 }
 
 .hostBadge {
-  background: var(--gradient-success);
+  background: var(--bg-success);
   color: white;
   padding: 6px 14px;
   border-radius: 20px;
@@ -137,13 +121,11 @@
   align-items: center;
   gap: 10px;
   font-size: 0.9rem;
-  color: var(--text-secondary);
-  background: var(--bg-glass);
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
   padding: 8px 14px;
   border-radius: 20px;
-  backdrop-filter: var(--blur-secondary);
-  -webkit-backdrop-filter: var(--blur-secondary);
-  border: 1px solid var(--border-primary);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .statusIndicator {
