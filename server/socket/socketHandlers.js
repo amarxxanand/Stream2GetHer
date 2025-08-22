@@ -129,6 +129,18 @@ export const handleSocketConnection = (socket, io) => {
         shouldBeHost = true;
         activeRoom.hostSocketId = socket.id;
         activeRoom.hostUsername = socket.username;
+      } else if (room.hostUsername && room.hostUsername === socket.username) {
+        // This user is the original room creator reconnecting
+        shouldBeHost = true;
+        activeRoom.hostSocketId = socket.id;
+        activeRoom.hostUsername = socket.username;
+        console.log(`👑 ${socket.username} reconnected as original host`);
+      } else if (activeRoom.hostUsername === socket.username) {
+        // This user is the current host reconnecting (critical for rapid reconnects)
+        shouldBeHost = true;
+        activeRoom.hostSocketId = socket.id;
+        activeRoom.hostUsername = socket.username;
+        console.log(`👑 ${socket.username} reconnected as active room host`);
       } else if (!activeRoom.hostSocketId) {
         // Fallback: if no host exists in memory, first user becomes host
         shouldBeHost = true;
@@ -159,7 +171,12 @@ export const handleSocketConnection = (socket, io) => {
         if (!syncIntervals.has(roomId)) {
           startSyncInterval(roomId, io);
         }
-      }      // Send current state to the new user
+      } else {
+        // Explicitly send non-host assignment
+        socket.emit('host-assigned', { isHost: false });
+      }
+      
+      // Send current state to the new user
       const syncState = {
         videoUrl: room.currentVideoUrl,
         videoTitle: room.currentVideoTitle,
