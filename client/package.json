@@ -12,14 +12,15 @@
   "dependencies": {
     "@ffmpeg/ffmpeg": "^0.12.15",
     "@ffmpeg/util": "^0.12.2",
+    "@vitejs/plugin-react": "^4.0.3",
+    "gsap": "^3.13.0",
     "lucide-react": "^0.263.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-player": "^2.16.1",
     "react-router-dom": "^6.15.0",
     "socket.io-client": "^4.7.2",
-    "vite": "^4.4.5",
-    "@vitejs/plugin-react": "^4.0.3"
+    "vite": "^4.4.5"
   },
   "devDependencies": {
     "@types/react": "^18.2.15",

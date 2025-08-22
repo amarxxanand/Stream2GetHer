@@ -84,20 +84,21 @@ const HomePage = () => {
   };
 
   return (
-    <div className={styles['home-container']}>
-      <div className={styles['home-content']}>
-        <div className={styles['hero-section']}>
-          <div className={styles['logo-container']}>
-            <Video size={48} className={styles['logo-icon']} />
-            <h1 className={styles['app-title']}>Stream2Gether</h1>
+    <>
+      <div className={styles['batman-background']}></div>
+      <div className={styles['main-container']}>
+        <div className={styles['home-content']}>
+          <div className={styles['hero-section']}>
+            <div className={styles['logo-container']}>
+              <Video size={48} className={styles['logo-icon']} />
+              <h1 className={styles['app-title']}>Stream2Gether</h1>
+            </div>
+            <p className={styles['app-description']}>
+              Watch Google Drive videos together in real-time with friends and family
+            </p>
           </div>
-          <p className={styles['app-description']}>
-            Watch Google Drive videos together in real-time with friends and family
-          </p>
-        </div>
 
-        <div className={styles['content-wrapper']}>
-          <div className={styles['form-container']}>
+          <div className={styles['forms-section']}>
             <div className={styles['username-section']}>
               <label htmlFor="username">Your Display Name</label>
               <input
@@ -111,13 +112,15 @@ const HomePage = () => {
               />
             </div>
 
-            <div className={styles['actions-section']}>
-              <div className={styles['action-group']}>
+            <div className={styles['action-group']}>
+              <div className={styles['action-text']}>
                 <h3>
                   <Play size={20} />
                   Start a New Room
                 </h3>
                 <p>Create a new watch party and invite others</p>
+              </div>
+              <div className={styles['action-buttons']}>
                 <button
                   onClick={createRoom}
                   disabled={isCreating || !username.trim()}
@@ -126,17 +129,21 @@ const HomePage = () => {
                   {isCreating ? 'Creating...' : 'Create Room'}
                 </button>
               </div>
+            </div>
 
-              <div className={styles['divider']}>
-                <span>OR</span>
-              </div>
+            <div className={styles['divider']}>
+              <span>OR</span>
+            </div>
 
-              <div className={styles['action-group']}>
+            <div className={styles['action-group']}>
+              <div className={styles['action-text']}>
                 <h3>
                   <Users size={20} />
                   Join an Existing Room
                 </h3>
                 <p>Enter a room ID to join a watch party</p>
+              </div>
+              <div className={styles['action-buttons']}>
                 <input
                   type="text"
                   placeholder="Enter Room ID"
@@ -159,18 +166,57 @@ const HomePage = () => {
             <div className={styles['features-inner-box']}>
               <h3>Features</h3>
               <ul>
-                <li>Real-time synchronized playback</li>
-                <li>Live chat with other viewers</li>
-                <li>Host controls for managing the session</li>
-                <li>Automatic resync after buffering</li>
-                <li>Works with YouTube videos AND Google Drive files</li>
-                <li>Supports all video formats (MP4, AVI, MOV, WebM, etc.)</li>
+                <li>
+                  <strong>Real-time synchronized playback:</strong> Everyone watches at exactly the same time - play, pause, seek, and the entire room stays perfectly in sync
+                </li>
+                <li>
+                  <strong>Live chat with other viewers:</strong> Discuss scenes, share reactions, and connect with friends through our integrated real-time messaging system
+                </li>
+                <li>
+                  <strong>Host controls for managing the session:</strong> Room creators have full control over playback, can kick users, and manage the viewing experience for everyone
+                </li>
+                <li>
+                  <strong>Automatic resync after buffering:</strong> Smart technology automatically detects when viewers fall out of sync and brings everyone back together seamlessly
+                </li>
+                <li>
+                  <strong>Works with YouTube videos AND Google Drive files:</strong> Stream content directly from YouTube links or upload your own movies and videos via Google Drive integration
+                </li>
+                <li>
+                  <strong>Supports all video formats:</strong> Compatible with MP4, AVI, MOV, WebM, MKV, FLV, and many more - no conversion needed, just upload and watch
+                </li>
+                <li>
+                  <strong>Cross-platform compatibility:</strong> Works seamlessly on desktop, tablet, and mobile devices with responsive design and touch controls
+                </li>
+                <li>
+                  <strong>No registration required:</strong> Jump right in with just a username - no lengthy sign-up process or personal information needed
+                </li>
               </ul>
             </div>
           </div>
+
+          <footer className={styles.footer}>
+            <p className={styles['footer-text']} style={{color: 'white'}}>
+              © 2025 Stream2Gether - Watch together, stay connected
+             
+            </p>
+            <p className={styles['footer-text']} style={{color: 'white', marginTop: '8px'}}>
+              Made with ❤️ by 
+               <a href="https://github.com/amarxxanand" target="_blank" rel="noopener noreferrer" style={{color: 'white', textDecoration: 'none', marginLeft: '8px'}}>
+                amarxxanand
+              </a>
+              <span style={{margin: '0 8px'}}>•</span>
+              <a href="https://github.com/amarxxanand" target="_blank" rel="noopener noreferrer" style={{color: 'white', textDecoration: 'none', marginLeft: '8px'}}>
+                GitHub
+              </a>
+              <span style={{margin: '0 8px'}}>•</span>
+              <a href="https://www.linkedin.com/in/amar--anand/" target="_blank" rel="noopener noreferrer" style={{color: 'white', textDecoration: 'none'}}>
+                LinkedIn
+              </a>
+            </p>
+          </footer>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 
