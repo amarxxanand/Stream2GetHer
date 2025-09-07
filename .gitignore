@@ -10,8 +10,8 @@ node_modules/
 .env.production.local
 
 # Production environment files (keep templates)
-# .env.production
-# .env.docker
+.env.production
+.env.docker
 
 # Build outputs
 */dist/
