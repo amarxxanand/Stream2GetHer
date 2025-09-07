@@ -179,15 +179,15 @@ export const handleSocketConnection = (socket, io) => {
       }
       
       // Send current state to the new user AFTER host assignment
+      // Note: We don't include isHost in sync-state as that's handled by host-assigned event
       const syncState = {
         videoUrl: room.currentVideoUrl,
         videoTitle: room.currentVideoTitle,
         time: room.lastKnownTime,
-        isPlaying: room.lastKnownState,
-        isHost: shouldBeHost
+        isPlaying: room.lastKnownState
       };
 
-      console.log(`📤 Sending sync state to ${socket.username} (isHost: ${shouldBeHost}):`, syncState);
+      console.log(`📤 Sending sync state to ${socket.username}:`, syncState);
       
       // Add a small delay to ensure host-assigned is processed first
       setTimeout(() => {
@@ -349,8 +349,7 @@ export const handleSocketConnection = (socket, io) => {
           videoUrl: room.currentVideoUrl,
           videoTitle: room.currentVideoTitle,
           time: room.lastKnownTime,
-          isPlaying: room.lastKnownState,
-          isHost: false
+          isPlaying: room.lastKnownState
         });
       }
     } catch (error) {

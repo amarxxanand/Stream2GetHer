@@ -268,18 +268,15 @@ const RoomPage = React.memo(() => {
     };
 
     const handleSyncState = (data) => {
-      const { videoUrl, videoTitle, time, isPlaying, isHost: hostStatus } = data;
+      const { videoUrl, videoTitle, time, isPlaying } = data;
       console.log('🔄 Received sync state:', data);
-      console.log(`🔑 Host status from sync-state: ${hostStatus}, current isHost: ${isHost}`);
       
       // Mark that we successfully joined the room - this confirms server accepted our join
       hasJoinedRoom = true;
       hasJoinedRoomRef.current = true;
       console.log(`✅ Instance ${instanceId} confirmed joined room successfully`);
       
-      console.log(`🔄 Setting isHost to: ${hostStatus}`);
-      setIsHost(hostStatus);
-      updateSharedState();
+      // Note: isHost is not included in sync-state, it's handled by host-assigned event only
       
       if (videoUrl && videoUrl !== currentVideoUrl) {
         console.log('📺 Setting video URL:', videoUrl);
