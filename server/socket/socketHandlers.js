@@ -8,9 +8,11 @@ const syncIntervals = new Map();
 const joinAttempts = new Map(); // socketId -> { count, lastAttempt }
 const activeConnections = new Map(); // roomId+username -> socketId
 const userConnections = new Map(); // socketId -> { roomId, username }
+const hostTransferTimeouts = new Map(); // roomId -> timeoutId (for delayed host transfers)
 
 const JOIN_RATE_LIMIT = 5; // max 5 attempts
 const JOIN_RATE_WINDOW = 15000; // per 15 seconds
+const HOST_TRANSFER_DELAY = 10000; // 10 seconds grace period before transferring host
 
 export const handleSocketConnection = (socket, io) => {
   console.log(`🔌 Socket connected: ${socket.id} from ${socket.handshake.address}`);
@@ -129,14 +131,33 @@ export const handleSocketConnection = (socket, io) => {
         shouldBeHost = true;
         activeRoom.hostSocketId = socket.id;
         activeRoom.hostUsername = socket.username;
+        console.log(`👑 ${socket.username} created room and became host`);
       } else if (room.hostUsername && room.hostUsername === socket.username) {
-        // This user is the original room creator reconnecting
+        // This user is the original room creator (from database) reconnecting
+        // They should ALWAYS get host back, even if someone else is temporarily host
+        const currentTempHost = activeRoom.hostSocketId;
+        
+        // Cancel any pending host transfer timeout for this room
+        if (hostTransferTimeouts.has(roomId)) {
+          clearTimeout(hostTransferTimeouts.get(roomId));
+          hostTransferTimeouts.delete(roomId);
+          console.log(`⏰ Cancelled host transfer timeout - original host ${socket.username} reconnected`);
+        }
+        
+        if (currentTempHost && currentTempHost !== socket.id && activeRoom.users.has(currentTempHost)) {
+          // Demote the temporary host
+          activeRoom.users.get(currentTempHost).isHost = false;
+          io.to(currentTempHost).emit('host-assigned', { isHost: false });
+          console.log(`👤 Demoted temporary host ${currentTempHost} - original host reconnected`);
+        }
+        
+        // Restore original host
         shouldBeHost = true;
         activeRoom.hostSocketId = socket.id;
         activeRoom.hostUsername = socket.username;
-        console.log(`👑 ${socket.username} reconnected as original host`);
+        console.log(`👑 ${socket.username} restored as original room host`);
       } else if (activeRoom.hostUsername === socket.username) {
-        // This user is the current host reconnecting (critical for rapid reconnects)
+        // This user is the current active room host reconnecting (for rapid reconnects)
         shouldBeHost = true;
         activeRoom.hostSocketId = socket.id;
         activeRoom.hostUsername = socket.username;
@@ -444,37 +465,60 @@ export const handleSocketConnection = (socket, io) => {
       if (activeRoom && activeRoom.users.has(socket.id)) {
         activeRoom.users.delete(socket.id);
         
-        // If this was the host, assign new host
+        // If this was the host, handle host transfer with grace period
         if (activeRoom.hostSocketId === socket.id) {
-          const remainingUsers = Array.from(activeRoom.users.keys());
-          if (remainingUsers.length > 0) {
-            const newHostSocketId = remainingUsers[0];
-            activeRoom.hostSocketId = newHostSocketId;
-            activeRoom.users.get(newHostSocketId).isHost = true;
-            
-            // Update database
-            try {
-              const room = await Room.findOne({ roomId: socket.roomId });
-              if (room) {
-                room.hostSocketId = newHostSocketId;
-                await room.save();
+          const roomId = socket.roomId;
+          const disconnectedHostUsername = socket.username;
+          
+          console.log(`👑 Host ${disconnectedHostUsername} disconnected, starting ${HOST_TRANSFER_DELAY/1000}s grace period`);
+          
+          // Set up delayed host transfer
+          const transferTimeout = setTimeout(async () => {
+            // Check if the room still exists and if the original host hasn't reconnected
+            const currentActiveRoom = activeRooms.get(roomId);
+            if (currentActiveRoom && currentActiveRoom.hostSocketId === socket.id) {
+              // Host hasn't reconnected, transfer to someone else
+              const remainingUsers = Array.from(currentActiveRoom.users.keys());
+              if (remainingUsers.length > 0) {
+                const newHostSocketId = remainingUsers[0];
+                const newHostUser = currentActiveRoom.users.get(newHostSocketId);
+                
+                currentActiveRoom.hostSocketId = newHostSocketId;
+                newHostUser.isHost = true;
+                
+                // Update database with new temporary host
+                try {
+                  const room = await Room.findOne({ roomId });
+                  if (room) {
+                    // Keep original host username in database for restoration
+                    room.hostSocketId = newHostSocketId;
+                    // room.hostUsername stays the same (original host)
+                    await room.save();
+                  }
+                } catch (error) {
+                  console.error('Error updating temporary host in database:', error);
+                }
+                
+                // Notify new temporary host
+                io.to(newHostSocketId).emit('host-assigned', { isHost: true });
+                console.log(`👑 Assigned temporary host: ${newHostUser.username} (original: ${disconnectedHostUsername})`);
+              } else {
+                // No users left, clean up room
+                activeRooms.delete(roomId);
+                if (syncIntervals.has(roomId)) {
+                  clearInterval(syncIntervals.get(roomId));
+                  syncIntervals.delete(roomId);
+                }
+                console.log(`🧹 Room ${roomId} cleaned up - no users remaining`);
               }
-            } catch (error) {
-              console.error('Error updating host in database:', error);
             }
             
-            // Notify new host
-            io.to(newHostSocketId).emit('host-assigned', { isHost: true });
-            console.log(`👑 New host assigned: ${newHostSocketId}`);
-          } else {
-            // No users left, clean up room
-            activeRooms.delete(socket.roomId);
-            if (syncIntervals.has(socket.roomId)) {
-              clearInterval(syncIntervals.get(socket.roomId));
-              syncIntervals.delete(socket.roomId);
-            }
-            console.log(`🧹 Room ${socket.roomId} cleaned up - no users remaining`);
-          }
+            // Clean up timeout
+            hostTransferTimeouts.delete(roomId);
+          }, HOST_TRANSFER_DELAY);
+          
+          // Store timeout so we can cancel it if host reconnects
+          hostTransferTimeouts.set(roomId, transferTimeout);
         }
         
         // Notify remaining users about the departure
