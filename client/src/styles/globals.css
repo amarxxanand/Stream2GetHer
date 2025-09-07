@@ -1,38 +1,53 @@
-/* Global Dark Theme with Black Background */
+/* Global Dark Theme with Enhanced Colors */
 :root {
-  /* Dark Theme Colors - Updated to Black */
-  --bg-primary: #000000;
-  --bg-secondary: #111111;
-  --bg-card: rgba(255,255,255,0.05);
-  --bg-glass: rgba(255, 255, 255, 0.08);
+  /* Enhanced Dark Theme Colors */
+  --bg-primary: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+  --bg-secondary: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  --bg-card: rgba(255,255,255,0.08);
+  --bg-glass: rgba(255, 255, 255, 0.12);
   --bg-button: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   --bg-button-hover: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
   --bg-danger: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
   --bg-success: linear-gradient(135deg, #51cf66 0%, #40c057 100%);
+  --bg-warning: linear-gradient(135deg, #ffd43b 0%, #fab005 100%);
+  --bg-info: linear-gradient(135deg, #339af0 0%, #228be6 100%);
+  --bg-purple: linear-gradient(135deg, #9775fa 0%, #845ef7 100%);
+  --bg-pink: linear-gradient(135deg, #f783ac 0%, #e64980 100%);
   
-  /* Text Colors */
+  /* Enhanced Text Colors */
   --text-primary: #ffffff;
-  --text-secondary: rgba(255, 255, 255, 0.8);
-  --text-muted: rgba(255, 255, 255, 0.6);
+  --text-secondary: rgba(255, 255, 255, 0.85);
+  --text-muted: rgba(255, 255, 255, 0.65);
   --text-accent: #667eea;
+  --text-success: #51cf66;
+  --text-warning: #ffd43b;
+  --text-danger: #ff6b6b;
   
-  /* Border Colors */
-  --border-primary: rgba(255, 255, 255, 0.1);
-  --border-secondary: rgba(255, 255, 255, 0.05);
-  --border-accent: rgba(102, 126, 234, 0.3);
+  /* Enhanced Border Colors */
+  --border-primary: rgba(255, 255, 255, 0.15);
+  --border-secondary: rgba(255, 255, 255, 0.08);
+  --border-accent: rgba(102, 126, 234, 0.4);
+  --border-glow: rgba(102, 126, 234, 0.6);
   
-  /* Shadow */
-  --shadow-primary: 0 8px 32px rgba(0, 0, 0, 0.3);
-  --shadow-secondary: 0 4px 16px rgba(0, 0, 0, 0.2);
-  --shadow-glow: 0 0 20px rgba(102, 126, 234, 0.2);
+  /* Enhanced Shadows */
+  --shadow-primary: 0 10px 40px rgba(0, 0, 0, 0.4);
+  --shadow-secondary: 0 6px 20px rgba(0, 0, 0, 0.3);
+  --shadow-glow: 0 0 30px rgba(102, 126, 234, 0.3);
+  --shadow-colored: 0 8px 32px rgba(102, 126, 234, 0.15);
+  --shadow-inset: inset 0 2px 4px rgba(0, 0, 0, 0.3);
   
-  /* Backdrop Blur */
-  --blur-primary: blur(10px);
-  --blur-secondary: blur(5px);
+  /* Enhanced Backdrop Blur */
+  --blur-primary: blur(12px);
+  --blur-secondary: blur(6px);
   
-  /* Chat Message Colors */
-  --chat-incoming: linear-gradient(135deg, #2196F3 0%, #1976D2 100%); /* Blue for incoming */
-  --chat-outgoing: linear-gradient(135deg, #4CAF50 0%, #388E3C 100%); /* Green for outgoing */
+  /* Enhanced Chat Message Colors */
+  --chat-incoming: linear-gradient(135deg, #339af0 0%, #228be6 100%);
+  --chat-outgoing: linear-gradient(135deg, #51cf66 0%, #40c057 100%);
+  --chat-system: linear-gradient(135deg, #9775fa 0%, #845ef7 100%);
+  
+  /* Input Colors */
+  --bg-input: rgba(255, 255, 255, 0.1);
+  --bg-input-focus: rgba(255, 255, 255, 0.15);
 }
 
 * {
@@ -48,6 +63,7 @@ body {
   color: var(--text-primary);
   line-height: 1.6;
   overflow-x: hidden;
+  min-height: 100vh;
 }
 
 #root {
