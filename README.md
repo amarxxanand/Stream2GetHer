@@ -1,15 +1,10 @@
-# 🎬 Stream2GetHer - Real-Time Synchronized Video Streaming Platform
+# 🎬 Stream2GetHer - Real-Time Synchronized Video Streaming
 
-> **Watch videos together, perfectly synchronized** - A modern MERN stack application for collaborative video streaming with Google Drive integration, YouTube support, and real-time chat.
-
-
-[![React](https://img.shields.io/badge/React-18.2.0-blue)](https://reactjs.org/)
-[![Node.js](https://img.shields.io/badge/Node.js-Express-green)](https://nodejs.org/)
-[![Socket.IO](https://img.shields.io/badge/Socket.IO-Real--time-orange)](https://socket.io/)
+> **Watch videos together, perfectly synchronized** - A modern platform for collaborative video streaming with Google Drive integration, YouTube support, and real-time chat.
 
 ## 🌟 What is Stream2GetHer?
 
-Stream2GetHer is a sophisticated real-time synchronized media platform that enables multiple users to watch videos together with perfect synchronization. Whether it's a movie night with friends, educational content sharing, or team presentations, Stream2GetHer brings people together through shared viewing experiences.
+Stream2GetHer enables multiple users to watch videos together with perfect synchronization. Whether it's a movie night with friends, educational content sharing, or team presentations, Stream2GetHer brings people together through shared viewing experiences.
 
 ### 🎯 Perfect For:
 - **Virtual Movie Nights** with friends and family
@@ -31,7 +26,6 @@ Stream2GetHer is a sophisticated real-time synchronized media platform that enab
 - **Host Authority**: Designated host controls playback for everyone
 - **Auto-correction**: Automatic drift correction every 10 seconds
 - **Buffer Recovery**: Smart resync after buffering or network issues
-- **Latency Compensation**: Configurable sync tolerance (default: 1.5s)
 
 ### 💬 **Interactive Features**
 - **Live Chat**: Real-time messaging with color-coded messages
@@ -41,94 +35,103 @@ Stream2GetHer is a sophisticated real-time synchronized media platform that enab
 - **Room System**: Create and join rooms with unique IDs
 - **Connection Status**: Real-time connection indicators
 
-### 🎨 **Modern Dark UI**
-- **Sleek Black Theme**: Professional dark interface
+### 🎨 **Modern Interface**
+- **Sleek Dark Theme**: Professional dark interface with excellent visibility
 - **Responsive Design**: Works perfectly on desktop, tablet, and mobile
-- **Glassmorphism Effects**: Modern visual design with backdrop blur
-- **Smooth Animations**: Fluid user experience with CSS transitions
+- **Modern Visual Design**: Clean interface with smooth animations
+- **User-Friendly**: Intuitive controls and navigation
 
-## 🏗️ Technical Architecture
+## � How to Use
 
-### **Technology Stack**
-```
-Frontend: React 18 + Vite + React Router + Socket.IO Client
-Backend:  Node.js + Express + Socket.IO + MongoDB
-UI:       CSS Modules + Lucide Icons + Modern Design System
-```
-
-### **System Flow**
-```
-┌─────────────────┐    WebSocket    ┌──────────────────┐    MongoDB    ┌─────────────┐
-│  React Client   │ ◄─────────────► │  Node.js Server │ ◄───────────► │  Database   │
-│                 │                 │                  │               │             │
-│ • Video Player  │                 │ • Socket.IO      │               │ • Rooms     │
-│ • Chat System   │                 │ • Google Drive   │               │ • Messages  │
-│ • User Lists    │                 │ • Room Logic     │               │ • Sessions  │
-│ • Sync Engine   │                 │ • FFmpeg Service │               │ • Metadata  │
-└─────────────────┘                 └──────────────────┘               └─────────────┘
-```
-
-## 🎮 How to Use
+### **Getting Started**
+1. **Visit**: [https://stream2gether.onrender.com](https://stream2gether.onrender.com)
+2. **Enter your name**: Choose a display name (max 30 characters)
+3. **Create or join a room**: Start a new room or join an existing one
 
 ### **Creating a Room**
-1. Open the application in your browser
-2. Enter your display name (max 30 characters)
-3. Click **"Create Room"** to generate a unique room
-4. Share the room URL or ID with friends
+1. Click **"Create Room"** to generate a unique room
+2. Share the room URL or room ID with friends
+3. Wait for participants to join
+4. Load a video and start watching together!
 
 ### **Joining a Room**
 1. Get the room ID from the host
-2. Enter your display name
-3. Enter the room ID and click **"Join Room"**
+2. Enter the room ID and click **"Join Room"**
+3. You'll be connected and ready to watch
 
 ### **Loading Videos (Host Only)**
-1. **Google Drive**: Share a video file with "Anyone with the link" and paste the URL
-2. **YouTube**: Paste any YouTube video URL or ID
-3. **Direct URLs**: Use direct video file URLs (.mp4, .mkv, etc.)
+
+#### **Google Drive Videos**
+1. Upload your video to Google Drive
+2. Right-click the video → "Get link" → "Anyone with the link"
+3. Copy the share URL and paste it in Stream2GetHer
+4. Click "Load Video" to start streaming
+
+#### **YouTube Videos**
+1. Copy any YouTube video URL (e.g., `https://youtube.com/watch?v=VIDEO_ID`)
+2. Paste the URL in the video input field
+3. Click "Load Video" to start playback
+
+#### **Direct Video URLs**
+1. Use any direct video file URL ending in `.mp4`, `.mkv`, etc.
+2. Paste the URL in the video input field
+3. Click "Load Video" to stream
+
+### **Video Controls (Host)**
+- **Play/Pause**: Control playback for all participants
+- **Seek**: Jump to any timestamp - everyone follows automatically
+- **Volume**: Individual volume control (not synchronized)
 
 ### **Chat & Interaction**
-- Use the chat panel to communicate with other viewers
-- Green bubbles show your messages, blue bubbles show others'
-- Host controls appear in the video controls section
+- **Real-time Chat**: Send messages that appear instantly for all users
+- **User List**: See all participants and identify the host (👑)
+- **Connection Status**: Monitor your connection quality
 
-## 🎨 Features in Detail
+## 🚀 Features in Detail
 
 ### **Video Player Engine**
-- **Multi-source Architecture**: Seamlessly switches between YouTube, Google Drive, and direct URLs
-- **Format Detection**: Automatic detection of video formats and optimal player selection
-- **Error Recovery**: Graceful handling of playback errors and format issues
-- **Mobile Optimization**: Touch-friendly controls and responsive video scaling
+- **Smart Format Detection**: Automatically detects and plays various video formats
+- **Cross-platform Compatibility**: Works on Windows, Mac, Linux, iOS, and Android
+- **Error Recovery**: Graceful handling of playback errors and network issues
+- **Mobile Optimization**: Touch-friendly controls and responsive scaling
 
-### **Synchronization Engine**
-- **Precision Timing**: Sub-second synchronization accuracy
-- **Network Adaptation**: Adjusts sync tolerance based on network conditions
-- **State Management**: Persistent room state with MongoDB
-- **Recovery Mechanisms**: Multiple fallback strategies for sync failures
+### **Synchronization Technology**
+- **Sub-second Accuracy**: Precision timing for perfect sync
+- **Network Adaptation**: Adjusts to different connection speeds
+- **Auto-recovery**: Automatically fixes sync drift and buffering issues
+- **Host Authority**: Only the host can control playback
 
-### **Chat System**
-- **Real-time Messaging**: WebSocket-based instant messaging
-- **Message Persistence**: Chat history stored in MongoDB
-- **User Identification**: Color-coded messages with timestamps
-- **Emoji Support**: Full emoji support with proper rendering
+### **Communication Features**
+- **Instant Messaging**: Real-time chat with message history
+- **User Identification**: See who's online with unique colors
+- **Emoji Support**: Express yourself with full emoji support
+- **Message Timestamps**: Track conversation flow
 
-## 🙏 Acknowledgments
+## 🎯 Tips for Best Experience
 
-- **YouTube IFrame API** for video playback capabilities
-- **Socket.IO** for real-time communication infrastructure
-- **React Team** for the excellent frontend framework
-- **MongoDB** for flexible data storage solutions
-- **Google Drive API** for seamless file integration
-- **FFmpeg** for advanced video processing
-- **Render.com** for hosting and deployment
+### **For Hosts**
+- Ensure your video files are accessible (public Google Drive links)
+- Test the video before starting the session
+- Use a stable internet connection for smooth hosting
+- Communicate with participants via chat
 
-## 🔗 Links
+### **For Participants**
+- Join rooms promptly when invited
+- Keep your browser tab active for best sync performance
+- Use headphones to avoid audio feedback
+- Engage in chat for better social experience
 
-- **Live Demo**: [https://stream2gether.onrender.com](https://stream2gether.onrender.com)
-- **GitHub Repository**: [https://github.com/amarxxanand/Stream2GetHer](https://github.com/amarxxanand/Stream2GetHer)
-- **Documentation**: [FEATURES.md](FEATURES.md)
+### **Technical Requirements**
+- **Browser**: Chrome, Firefox, Safari, or Edge (latest versions)
+- **Internet**: Stable broadband connection recommended
+- **Device**: Desktop, laptop, tablet, or smartphone
+- **Audio**: Speakers or headphones for audio
+
+## 🔗 Quick Links
+
+- **Live App**: [https://stream2gether.onrender.com](https://stream2gether.onrender.com)
+- **GitHub**: [https://github.com/amarxxanand/Stream2GetHer](https://github.com/amarxxanand/Stream2GetHer)
 
 ---
 
-**Made with ❤️ for bringing people together through shared experiences**
-
-*Stream2GetHer - Where distance doesn't matter, moments do.*
+**Stream2GetHer - Where distance doesn't matter, moments do.** ❤️
