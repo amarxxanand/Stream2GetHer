@@ -71,9 +71,26 @@ if (process.env.NODE_ENV === 'production') {
         mediaSrc: ["'self'"],
         frameSrc: ["'self'", "https://drive.google.com", "https://www.youtube.com"]
       }
-    }
+    },
+    hsts: {
+      maxAge: 31536000,
+      includeSubDomains: true,
+      preload: true
+    },
+    noSniff: true,
+    xssFilter: true,
+    referrerPolicy: { policy: 'same-origin' }
   }));
   app.use(compression());
+  
+  // Additional security headers
+  app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    next();
+  });
 }
 
 // Rate limiting
@@ -663,6 +680,32 @@ app.get('/api/video/metadata', async (req, res) => {
     
     res.status(400).json({ error: error.message });
   }
+});
+
+// Global error handling middleware
+app.use((err, req, res, next) => {
+  console.error('❌ Unhandled error:', err);
+  
+  // Don't leak error details in production
+  const isDevelopment = process.env.NODE_ENV !== 'production';
+  
+  const errorResponse = {
+    message: 'Internal server error',
+    ...(isDevelopment && { 
+      error: err.message,
+      stack: err.stack 
+    })
+  };
+  
+  res.status(500).json(errorResponse);
+});
+
+// 404 handler for API routes
+app.use('/api/*', (req, res) => {
+  res.status(404).json({
+    message: 'API route not found',
+    path: req.originalUrl
+  });
 });
 
 // Socket.IO connection handling
