@@ -4,17 +4,12 @@
   justify-content: center;
   align-items: center;
   padding: 20px;
-  background: rgba(15, 23, 42, 0.85);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 24px;
+  background: rgba(36, 11, 54, 0.7); /* semi-transparent, matches gradient theme */
+  border-radius: 18px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.10);
   margin: 20px auto;
   max-width: 1200px;
   width:70%;
-  box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
   position: relative;
   z-index: 5;
 }
@@ -36,11 +31,9 @@
   width: 100%;
   height: 100%;
   z-index: 1;
-  background-image: url('../../assests/batman1.png');
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-attachment: fixed;
+  background: #c31432;  /* fallback for old browsers */
+  background: -webkit-linear-gradient(to right, #240b36, #c31432);  /* Chrome 10-25, Safari 5.1-6 */
+  background: linear-gradient(to right, #240b36, #c31432); /* W3C, IE 10+/ Edge, Firefox 16+, Chrome 26+, Opera 12+, Safari 7+ */
   opacity: 0.8;
 }
 
@@ -52,8 +45,8 @@
 /* Wider display layout for action groups */
 @media (min-width: 768px) {
   .main-container {
-    max-width: 1400px;
-    padding: 40px;
+    max-width: 1050px;
+    padding: 10px;
   }
   
   .home-content {
@@ -101,18 +94,23 @@
   background: transparent;
   border: none;
   border-radius: 16px;
-  padding: 16px;
+  padding-top: 6px;
+  padding-bottom: 6px;
   margin-bottom: 16px;
+    padding-left: 16px;
+  padding-right: 16px;
   position: relative;
   z-index: 10;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 6px;
 }
 
 .features-section {
   margin-top: 0;
   position: relative;
+  padding-left: 16px;
+  padding-right: 16px;
   z-index: 10;
 }
 
@@ -133,7 +131,7 @@
   color: #ffffff;
   padding: 10px;
   border-radius: 16px;
-  margin-bottom: 16px;
+  /* margin-bottom: 16px; */
   position: relative;
   z-index: 10;
 }
@@ -277,7 +275,8 @@
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 18px;
-  padding: 24px;
+  padding-left: 24px;
+  padding-right: 24px;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   transition: all 0.3s ease;
@@ -476,7 +475,7 @@
   -webkit-backdrop-filter: blur(15px);
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 16px;
-  padding: 20px;
+  padding: 16px;
   position: relative;
   z-index: 10;
   box-shadow: 
